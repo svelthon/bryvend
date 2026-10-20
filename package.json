@@ -1,6 +1,6 @@
 {
   "name": "bryve",
-  "version": "0.1.0",
+  "version": "3.14.3",
   "description": "The Brython that Bryntime and Bryc run on, with its fixes, until upstream Brython carries them",
   "author": "Florent Gallaire <fgallaire@gmail.com>",
   "license": "BSD-3-Clause",
