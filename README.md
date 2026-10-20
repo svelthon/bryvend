@@ -1,11 +1,11 @@
-# Bryve
+# Bryvend
 
-Bryve, the Brython that Bryntime and Bryc run on, with its fixes, until upstream
+Bryvend, the Brython that Bryntime and Bryc run on, with its fixes, until upstream
 Brython carries them.
 
 ```js
-import 'bryve';          // the runtime, started
-import 'bryve/compiler'; // the parsing chain, after it
+import 'bryvend';          // the runtime, started
+import 'bryvend/compiler'; // the parsing chain, after it
 ```
 
 Brython was written as a classic `<script>`; `start/` runs it as an ES module,

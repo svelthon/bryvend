@@ -29,7 +29,7 @@ globalThis.$B = globalThis.__BRYTHON__;
 // So the names present before Brython loads are recorded here, and engine.js
 // removes whatever it added, but only off a real browser, where these globals
 // belong to the page and are none of Brython's business.
-globalThis.$B.$bryveGlobalsBefore ??= new Set(Object.getOwnPropertyNames(globalThis));
+globalThis.$B.$bryvendGlobalsBefore ??= new Set(Object.getOwnPropertyNames(globalThis));
 
 // brython.js splits itself in two at load time and picks a half from the process
 // alone: `isNode = typeof process !== 'undefined' && process.release.name ===
@@ -49,6 +49,6 @@ if (globalThis.document && globalThis.process?.release?.name === 'node') {
 
     Object.defineProperty(shadow, 'release', { value: { ...real.release, name: 'jsdom' } });
 
-    globalThis.$B.$bryveRealProcess = real;
+    globalThis.$B.$bryvendRealProcess = real;
     globalThis.process = shadow;
 }

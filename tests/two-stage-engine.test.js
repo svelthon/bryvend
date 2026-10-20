@@ -9,7 +9,7 @@
 // flag: a site ships `brython_runtime.js`, and only what compiles pays for
 // `brython_compiler.js`.
 //
-// This file loads the two halves directly rather than through `bryve`, which
+// This file loads the two halves directly rather than through `bryvend`, which
 // starts the engine.
 import { test, expect } from 'vitest';
 import { readFileSync } from 'node:fs';

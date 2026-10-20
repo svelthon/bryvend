@@ -7,7 +7,7 @@ upstream since (#3022, #2996, #2989, #2982, #3125), with **five** edits
 made in the file itself afterwards, and one proposed commit,
 `property-delete-without-setter`, applied in the file itself until the next
 re-vendoring takes it from its branch. The wrapper, the integer format and the
-`__call__` binding carry a `/* BRYVE patch, see BRYTHON_FIX.md */` comment,
+`__call__` binding carry a `/* BRYVEND patch, see BRYTHON_FIX.md */` comment,
 the only way to find them again in 1.4 MB; `@vite-ignore` *is* a comment, so
 it finds itself, and the CommonJS export is a line that is no longer there.
 
@@ -197,7 +197,7 @@ no place in an engine that is not built with it.
 
 `brython.js` was written for a `<script>` in a page. Run as an ES module, in a
 page or under Node, it finds none of what that page gives it, and two modules
-of Bryve, `start/`, give it back. Not proposed upstream yet: they are the first
+of Bryvend, `start/`, give it back. Not proposed upstream yet: they are the first
 step for Brython to run under Node with nothing else, towards a `$ brython` as
 there is a `$ python`, and the PR will come from them.
 

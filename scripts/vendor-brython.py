@@ -44,7 +44,7 @@ from make_dist import COMPILER_CHAIN_OPEN, COMPILER_CHAIN_CLOSE  # noqa: E402
 # while changing the top-level shape of the file for everyone. See
 # BRYTHON_FIX.md, which ships beside the bundles it describes.
 GUARD = """\
-// /* BRYVE patch, see BRYTHON_FIX.md */
+// /* BRYVEND patch, see BRYTHON_FIX.md */
 // One interpreter per process. Under Node, Node's own loader and a bundler's
 // module graph, a server-rendered component's under Vite, can each evaluate
 // this file, which are two module instances of the same file; `$B.builtins`

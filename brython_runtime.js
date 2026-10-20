@@ -1,4 +1,4 @@
-// /* BRYVE patch, see BRYTHON_FIX.md */
+// /* BRYVEND patch, see BRYTHON_FIX.md */
 // One interpreter per process. Under Node, Node's own loader and a bundler's
 // module graph, a server-rendered component's under Vite, can each evaluate
 // this file, which are two module instances of the same file; `$B.builtins`
@@ -2006,7 +2006,7 @@ var call_method=klass.tp_call
 if(test){console.log('call_method',call_method)}
 if(call_method===$B.NULL){$B.RAISE(_b_.TypeError,"'"+$B.class_name(callable)+
 "' object is not callable")}
-if(typeof call_method !=='function'){/* BRYVE patch, see BRYTHON_FIX.md */var call_getter=$B.search_slot($B.get_class(call_method),'tp_descr_get',$B.NULL)
+if(typeof call_method !=='function'){/* BRYVEND patch, see BRYTHON_FIX.md */var call_getter=$B.search_slot($B.get_class(call_method),'tp_descr_get',$B.NULL)
 if(call_getter !==$B.NULL){return $B.$call(call_getter(call_method,callable,klass),...args)}
 if($B.get_class(call_method).tp_call !==$B.NULL){
 return $B.$call(call_method,...args)}else{
@@ -9367,7 +9367,7 @@ return s+fill.repeat(missing)
 case ">":
 return fill.repeat(missing)+s
 case "=":
-/* BRYVE patch, see BRYTHON_FIX.md */var lead=s.match(fmt.alternate ? /^[+\- ]?(0[xXoObB])?/ : /^[+\- ]?/)[0]
+/* BRYVEND patch, see BRYTHON_FIX.md */var lead=s.match(fmt.alternate ? /^[+\- ]?(0[xXoObB])?/ : /^[+\- ]?/)[0]
 return lead+fill.repeat(missing)+s.substr(lead.length)
 case "^":
 var left=parseInt(missing/2)
@@ -10234,7 +10234,7 @@ case "d":
 res=value.toString()
 break
 case "b":
-res=/* BRYVE patch, see BRYTHON_FIX.md */(value < 0 ? "-" :"")+(fmt.alternate ? "0b" :"")+(value < 0 ? -value :value).toString(2)
+res=/* BRYVEND patch, see BRYTHON_FIX.md */(value < 0 ? "-" :"")+(fmt.alternate ? "0b" :"")+(value < 0 ? -value :value).toString(2)
 break
 case "c":
 res=_b_.chr(value)

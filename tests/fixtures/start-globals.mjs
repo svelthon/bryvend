@@ -1,6 +1,6 @@
 // What engine.js decides, reached the only way it can be reached: a fresh process.
 //
-// The decision runs once, guarded by `$B.$bryveStarted`, and it reads the set
+// The decision runs once, guarded by `$B.$bryvendStarted`, and it reads the set
 // of global names recorded by page.js *before* Brython loads. Nothing inside
 // an already-started process can put that back, so each scenario is a child node
 // process and this file is what it runs.

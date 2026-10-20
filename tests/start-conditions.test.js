@@ -74,13 +74,13 @@ describe.skipIf(!canSpawn)('what the bootstrap cleanup is allowed to remove', ()
         }
     });
 
-    // **Bryve runs alone**, as its README says: `import 'bryve'`, then
-    // `import 'bryve/compiler'`, in a process that loads nothing else, and
+    // **Bryvend runs alone**, as its README says: `import 'bryvend'`, then
+    // `import 'bryvend/compiler'`, in a process that loads nothing else, and
     // Python compiles and runs.
     test('imported by its name in an empty process, it starts, compiles Python and runs it', () => {
         const program = [
-            "import 'bryve';",
-            "import 'bryve/compiler';",
+            "import 'bryvend';",
+            "import 'bryvend/compiler';",
             "const src = 'print(sum(i * i for i in range(10)), [n ** 2 for n in range(4)])\\n';",
             "new Function(globalThis.__BRYTHON__.py2js({ src, filename: 'alone.py' }, 'alone', ['alone']).to_js())();"
         ].join('\n');
