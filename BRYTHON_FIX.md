@@ -192,3 +192,16 @@ while changing the top-level shape of the file for everyone.
 `/* @vite-ignore */` is a comment addressed to **one bundler**. It means nothing
 to esbuild, to Rollup on its own, or in a browser. A build tool's annotation has
 no place in an engine that is not built with it.
+
+## Beside the file: Brython outside a classic script
+
+`brython.js` was written for a `<script>` in a page. Run as an ES module, in a
+page or under Node, it finds none of what that page gives it, and two modules
+of Bryve, `start/`, give it back. Not proposed upstream yet: they are the first
+step for Brython to run under Node with nothing else, towards a `$ brython` as
+there is a `$ python`, and the PR will come from them.
+
+| Beside the file | What it buys |
+|---|---|
+| `start/page.js`, before the runtime runs | what the page of a classic script gives `brython.js`: `self` and `addEventListener`, which Node has not; `brython_path`, since `document.currentScript` is null in a module; `$B` as a global, which the code generator's `eval` resolves; and under jsdom, a process that says there is a DOM, the question `isNode` means to ask |
+| `start/engine.js`, after it | the engine started once, as a page's `brython()` starts it, with `ipy_id: []` since the Python run here is compiled ahead of time; then, off a browser, the DOM stubs `brython.js` laid down taken back, which made every library that tests `typeof document` take the browser path on a server |

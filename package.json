@@ -9,15 +9,22 @@
     "brython"
   ],
   "type": "module",
-  "main": "./brython_runtime.js",
+  "main": "./start/engine.js",
   "exports": {
-    ".": "./brython_runtime.js",
+    ".": "./start/engine.js",
     "./compiler": "./brython_compiler.js",
     "./package.json": "./package.json"
   },
   "files": [
     "brython_runtime.js",
     "brython_compiler.js",
+    "start",
     "BRYTHON_FIX.md"
-  ]
+  ],
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.12"
+  }
 }
