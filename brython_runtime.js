@@ -724,7 +724,7 @@ $B.stdlib_module_names=Object.keys($B.stdlib)})(__BRYTHON__);
 var $B=__BRYTHON__
 $B.unicode={"No_digits":[178,179,185,[4969,9],6618,8304,[8308,6],[8320,10],[9312,9],[9332,9],[9352,9],9450,[9461,9],9471,[10102,9],[10112,9],[10122,9],[68160,4],[69216,9],[69714,9],[127232,11]],"Lo_numeric":[13317,13443,14378,15181,19968,19971,19975,19977,20004,20061,20108,20116,20118,20140,20159,20160,20191,20200,20237,20336,20457,20486,20740,20806,[20841,3,2],21313,[21315,3],21324,[21441,4],22235,22769,22777,24186,24318,24319,[24332,3],24336,25296,25342,25420,26578,27934,28422,29590,30334,30357,31213,32902,33836,36014,36019,36144,37390,38057,38433,38470,38476,38520,38646,63851,63859,63864,63922,63953,63955,63997,131073,131172,131298,131361,133418,133507,133516,133532,133866,133885,133913,140176,141720,146203,156269,194704]}
 $B.digits_starts=[48,1632,1776,1984,2406,2534,2662,2790,2918,3046,3174,3302,3430,3558,3664,3792,3872,4160,4240,6112,6160,6470,6608,6784,6800,6992,7088,7232,7248,42528,43216,43264,43472,43504,43600,44016,65296,66720,68912,68928,69734,69872,69942,70096,70384,70736,70864,71248,71360,71376,71386,71472,71904,72016,72688,72784,73040,73120,73184,73552,90416,92768,92864,93008,93552,118000,120782,120792,120802,120812,120822,123200,123632,124144,124401,125264,130032]
-$B.unicode_casefold={223:[115,115],304:[105,775],329:[700,110],496:[106,780],912:[953,776,769],944:[965,776,769],1415:[1381,1410],7830:[104,817],7831:[116,776],7832:[119,778],7833:[121,778],7834:[97,702],7838:[223],8016:[965,787],8018:[965,787,768],8020:[965,787,769],8022:[965,787,834],8064:[7936,953],8065:[7937,953],8066:[7938,953],8067:[7939,953],8068:[7940,953],8069:[7941,953],8070:[7942,953],8071:[7943,953],8072:[8064],8073:[8065],8074:[8066],8075:[8067],8076:[8068],8077:[8069],8078:[8070],8079:[8071],8080:[7968,953],8081:[7969,953],8082:[7970,953],8083:[7971,953],8084:[7972,953],8085:[7973,953],8086:[7974,953],8087:[7975,953],8088:[8080],8089:[8081],8090:[8082],8091:[8083],8092:[8084],8093:[8085],8094:[8086],8095:[8087],8096:[8032,953],8097:[8033,953],8098:[8034,953],8099:[8035,953],8100:[8036,953],8101:[8037,953],8102:[8038,953],8103:[8039,953],8104:[8096],8105:[8097],8106:[8098],8107:[8099],8108:[8100],8109:[8101],8110:[8102],8111:[8103],8114:[8048,953],8115:[945,953],8116:[940,953],8118:[945,834],8119:[945,834,953],8124:[8115],8130:[8052,953],8131:[951,953],8132:[942,953],8134:[951,834],8135:[951,834,953],8140:[8131],8146:[953,776,768],8147:[912],8150:[953,834],8151:[953,776,834],8162:[965,776,768],8163:[944],8164:[961,787],8166:[965,834],8167:[965,776,834],8178:[8060,953],8179:[969,953],8180:[974,953],8182:[969,834],8183:[969,834,953],8188:[8179],64256:[102,102],64257:[102,105],64258:[102,108],64259:[102,102,105],64260:[102,102,108],64261:[64262],64262:[115,116],64275:[1396,1398],64276:[1396,1381],64277:[1396,1387],64278:[1406,1398],64279:[1396,1389]}
+$B.unicode_casefold={181:[956],223:[115,115],329:[700,110],383:[115],496:[106,780],837:[953],912:[953,776,769],944:[965,776,769],962:[963],976:[946],977:[952],981:[966],982:[960],1008:[954],1009:[961],1013:[949],1415:[1381,1410],5024:[5024],5025:[5025],5026:[5026],5027:[5027],5028:[5028],5029:[5029],5030:[5030],5031:[5031],5032:[5032],5033:[5033],5034:[5034],5035:[5035],5036:[5036],5037:[5037],5038:[5038],5039:[5039],5040:[5040],5041:[5041],5042:[5042],5043:[5043],5044:[5044],5045:[5045],5046:[5046],5047:[5047],5048:[5048],5049:[5049],5050:[5050],5051:[5051],5052:[5052],5053:[5053],5054:[5054],5055:[5055],5056:[5056],5057:[5057],5058:[5058],5059:[5059],5060:[5060],5061:[5061],5062:[5062],5063:[5063],5064:[5064],5065:[5065],5066:[5066],5067:[5067],5068:[5068],5069:[5069],5070:[5070],5071:[5071],5072:[5072],5073:[5073],5074:[5074],5075:[5075],5076:[5076],5077:[5077],5078:[5078],5079:[5079],5080:[5080],5081:[5081],5082:[5082],5083:[5083],5084:[5084],5085:[5085],5086:[5086],5087:[5087],5088:[5088],5089:[5089],5090:[5090],5091:[5091],5092:[5092],5093:[5093],5094:[5094],5095:[5095],5096:[5096],5097:[5097],5098:[5098],5099:[5099],5100:[5100],5101:[5101],5102:[5102],5103:[5103],5104:[5104],5105:[5105],5106:[5106],5107:[5107],5108:[5108],5109:[5109],5112:[5104],5113:[5105],5114:[5106],5115:[5107],5116:[5108],5117:[5109],7296:[1074],7297:[1076],7298:[1086],7299:[1089],7300:[1090],7301:[1090],7302:[1098],7303:[1123],7304:[42571],7830:[104,817],7831:[116,776],7832:[119,778],7833:[121,778],7834:[97,702],7835:[7777],7838:[115,115],8016:[965,787],8018:[965,787,768],8020:[965,787,769],8022:[965,787,834],8064:[7936,953],8065:[7937,953],8066:[7938,953],8067:[7939,953],8068:[7940,953],8069:[7941,953],8070:[7942,953],8071:[7943,953],8072:[7936,953],8073:[7937,953],8074:[7938,953],8075:[7939,953],8076:[7940,953],8077:[7941,953],8078:[7942,953],8079:[7943,953],8080:[7968,953],8081:[7969,953],8082:[7970,953],8083:[7971,953],8084:[7972,953],8085:[7973,953],8086:[7974,953],8087:[7975,953],8088:[7968,953],8089:[7969,953],8090:[7970,953],8091:[7971,953],8092:[7972,953],8093:[7973,953],8094:[7974,953],8095:[7975,953],8096:[8032,953],8097:[8033,953],8098:[8034,953],8099:[8035,953],8100:[8036,953],8101:[8037,953],8102:[8038,953],8103:[8039,953],8104:[8032,953],8105:[8033,953],8106:[8034,953],8107:[8035,953],8108:[8036,953],8109:[8037,953],8110:[8038,953],8111:[8039,953],8114:[8048,953],8115:[945,953],8116:[940,953],8118:[945,834],8119:[945,834,953],8124:[945,953],8126:[953],8130:[8052,953],8131:[951,953],8132:[942,953],8134:[951,834],8135:[951,834,953],8140:[951,953],8146:[953,776,768],8147:[953,776,769],8150:[953,834],8151:[953,776,834],8162:[965,776,768],8163:[965,776,769],8164:[961,787],8166:[965,834],8167:[965,776,834],8178:[8060,953],8179:[969,953],8180:[974,953],8182:[969,834],8183:[969,834,953],8188:[969,953],43888:[5024],43889:[5025],43890:[5026],43891:[5027],43892:[5028],43893:[5029],43894:[5030],43895:[5031],43896:[5032],43897:[5033],43898:[5034],43899:[5035],43900:[5036],43901:[5037],43902:[5038],43903:[5039],43904:[5040],43905:[5041],43906:[5042],43907:[5043],43908:[5044],43909:[5045],43910:[5046],43911:[5047],43912:[5048],43913:[5049],43914:[5050],43915:[5051],43916:[5052],43917:[5053],43918:[5054],43919:[5055],43920:[5056],43921:[5057],43922:[5058],43923:[5059],43924:[5060],43925:[5061],43926:[5062],43927:[5063],43928:[5064],43929:[5065],43930:[5066],43931:[5067],43932:[5068],43933:[5069],43934:[5070],43935:[5071],43936:[5072],43937:[5073],43938:[5074],43939:[5075],43940:[5076],43941:[5077],43942:[5078],43943:[5079],43944:[5080],43945:[5081],43946:[5082],43947:[5083],43948:[5084],43949:[5085],43950:[5086],43951:[5087],43952:[5088],43953:[5089],43954:[5090],43955:[5091],43956:[5092],43957:[5093],43958:[5094],43959:[5095],43960:[5096],43961:[5097],43962:[5098],43963:[5099],43964:[5100],43965:[5101],43966:[5102],43967:[5103],64256:[102,102],64257:[102,105],64258:[102,108],64259:[102,102,105],64260:[102,102,108],64261:[115,116],64262:[115,116],64275:[1396,1398],64276:[1396,1381],64277:[1396,1387],64278:[1406,1398],64279:[1396,1389]}
 $B.unicode_bidi_whitespace=[9,10,11,12,13,28,29,30,31,32,133,5760,8192,8193,8194,8195,8196,8197,8198,8199,8200,8201,8202,8232,8233,8287,12288]
 $B.unicode_titles={"\u01c5":"\u01c5","\u01c6":"\u01c5","\u01c4":"\u01c5","\u01c8":"\u01c8","\u01c9":"\u01c8","\u01c7":"\u01c8","\u01cb":"\u01cb","\u01cc":"\u01cb","\u01ca":"\u01cb","\u01f2":"\u01f2","\u01f3":"\u01f2","\u01f1":"\u01f2","\u1f88":"\u1f88","\u1f80":"\u1f88","\u1f08\u0399":"\u1f88","\u1f89":"\u1f89","\u1f81":"\u1f89","\u1f09\u0399":"\u1f89","\u1f8a":"\u1f8a","\u1f82":"\u1f8a","\u1f0a\u0399":"\u1f8a","\u1f8b":"\u1f8b","\u1f83":"\u1f8b","\u1f0b\u0399":"\u1f8b","\u1f8c":"\u1f8c","\u1f84":"\u1f8c","\u1f0c\u0399":"\u1f8c","\u1f8d":"\u1f8d","\u1f85":"\u1f8d","\u1f0d\u0399":"\u1f8d","\u1f8e":"\u1f8e","\u1f86":"\u1f8e","\u1f0e\u0399":"\u1f8e","\u1f8f":"\u1f8f","\u1f87":"\u1f8f","\u1f0f\u0399":"\u1f8f","\u1f98":"\u1f98","\u1f90":"\u1f98","\u1f28\u0399":"\u1f98","\u1f99":"\u1f99","\u1f91":"\u1f99","\u1f29\u0399":"\u1f99","\u1f9a":"\u1f9a","\u1f92":"\u1f9a","\u1f2a\u0399":"\u1f9a","\u1f9b":"\u1f9b","\u1f93":"\u1f9b","\u1f2b\u0399":"\u1f9b","\u1f9c":"\u1f9c","\u1f94":"\u1f9c","\u1f2c\u0399":"\u1f9c","\u1f9d":"\u1f9d","\u1f95":"\u1f9d","\u1f2d\u0399":"\u1f9d","\u1f9e":"\u1f9e","\u1f96":"\u1f9e","\u1f2e\u0399":"\u1f9e","\u1f9f":"\u1f9f","\u1f97":"\u1f9f","\u1f2f\u0399":"\u1f9f","\u1fa8":"\u1fa8","\u1fa0":"\u1fa8","\u1f68\u0399":"\u1fa8","\u1fa9":"\u1fa9","\u1fa1":"\u1fa9","\u1f69\u0399":"\u1fa9","\u1faa":"\u1faa","\u1fa2":"\u1faa","\u1f6a\u0399":"\u1faa","\u1fab":"\u1fab","\u1fa3":"\u1fab","\u1f6b\u0399":"\u1fab","\u1fac":"\u1fac","\u1fa4":"\u1fac","\u1f6c\u0399":"\u1fac","\u1fad":"\u1fad","\u1fa5":"\u1fad","\u1f6d\u0399":"\u1fad","\u1fae":"\u1fae","\u1fa6":"\u1fae","\u1f6e\u0399":"\u1fae","\u1faf":"\u1faf","\u1fa7":"\u1faf","\u1f6f\u0399":"\u1faf","\u1fbc":"\u1fbc","\u1fb3":"\u1fbc","\u0391\u0399":"\u1fbc","\u1fcc":"\u1fcc","\u1fc3":"\u1fcc","\u0397\u0399":"\u1fcc","\u1ffc":"\u1ffc","\u1ff3":"\u1ffc","\u03a9\u0399":"\u1ffc"}
 ;
@@ -783,25 +783,14 @@ var re=new RegExp('\\p{'+category+'}','u')
 return re.test(String.fromCodePoint(cp))}catch(err){
 return in_unicode_category(category,cp)}}
 function in_unicode_category(category,cp){
-var table=$B.unicode[category],start=0,end=table.length-1,len=table.length,ix=Math.floor(len/2),nb=0
-var first=table[start],item=typeof first=='number' ? first :first[0]
-if(cp < item){return false}
-var last=table[end]
-if(typeof last=='number'){if(cp > last){return false}}else if(last[0]+last[1]< cp){return false}
-while(true){nb++
-if(nb > 100){console.log('infinite loop for',cp)
-alert()}
-item=table[ix]
-if(typeof item !='number'){item=item[0]}
-if(item==cp){return true}else if(item > cp){end=ix}else{
-start=ix}
-len=Math.floor((end-start)/2)
-if(end-start==1){break}
-ix=start+len}
-var step=table[start][2]
-if(step===undefined){return table[start][0]+table[start][1]> cp}
-return(table[start][0]+step*table[start][1]> cp)&&
-((cp-table[start][0])% step)==0}
+var table=$B.unicode[category],start=-1,end=table.length
+while(end-start > 1){var ix=(start+end)>> 1,item=table[ix]
+if((typeof item=='number' ? item :item[0])> cp){end=ix}else{
+start=ix}}
+if(start==-1){return false}
+if(typeof table[start]=='number'){return table[start]==cp}
+var[first,count,step=1]=table[start]
+return first+step*count > cp &&(cp-first)% step==0}
 const FT_START={f:'FSTRING_START',t:'TSTRING_START'},FT_MIDDLE={f:'FSTRING_MIDDLE',t:'TSTRING_MIDDLE'},FT_END={f:'FSTRING_END',t:'TSTRING_END'}
 function ord(char){if(char.length==1){return char.charCodeAt(0)}
 var code=0x10000
@@ -1618,7 +1607,7 @@ if(Object.hasOwn(kwa,k)){$B.RAISE(_b_.TypeError,fname+
 k+"'")}
 if(! getitem){try{
 getitem=$B.$getattr(cls,'__getitem__')}catch(err){$B.RAISE(_b_.TypeError,`'${$B.class_name(kw_arg)}' object is not subscriptable`)}}
-kwa[k]=$B.$getitem1(kw_arg,k)}}}
+kwa[k]=$B.$call(getitem,kw_arg,k)}}}
 return kwa}
 $B.parse_tuple=function(args,start,types){
 if(args.length-start !==types.length){$B.RAISE(_b_.TypeError,`function takes exactly ${types.length} arguments `+
@@ -4137,6 +4126,11 @@ too_many_pos=nb_pos-positional_length}}
 if(has_kw){function add_key(key,value){
 var param=typeof key !='string' && $B.is_str(key)?
 key.$brython_value :key
+if(seen !==null){if(seen.has(param)){var func=infos[$B.func_attrs.__module__]+'.'+
+infos[$B.func_attrs.__qualname__]
+$B.RAISE(_b_.TypeError,`${func}() got multiple `+
+`values for keyword argument '${param}'`)}
+seen.add(param)}
 var index=arg_names.indexOf(param)
 if(index==-1){if(kwarg){add_to_kwargs(locals[kwarg],key,value)
 return}else{
@@ -4153,7 +4147,8 @@ posonly_as_keywords=posonly_as_keywords ??[]
 posonly_as_keywords.push(param)}}}else{
 locals[param]=value
 filled_pos++}}
-var elt=last_arg
+var elt=last_arg,
+seen=elt[$B.KW].length > 1 ? new Set():null
 for(let key in elt[$B.KW][0]){add_key(key,elt[$B.KW][0][key])}
 for(let i=1;i< elt[$B.KW].length;i++){if($B.get_class(elt[$B.KW][i])===_b_.dict){for(let item of _b_.dict.$iter_items(elt[$B.KW][i])){add_key(item.key,item.value)}}else{
 let klass=$B.get_class(elt[$B.KW][i])
@@ -4161,7 +4156,7 @@ let keys_method=$B.$getattr(klass,'keys',null)
 let getitem=$B.$getattr(klass,'__getitem__',null)
 if(keys_method===null ||getitem===null){$B.RAISE(_b_.TypeError,`${name} argument after ** must be a mapping, `+
 `not ${$B.class_name(elt[$B.KW][i])}`)}
-for(let key of $B.make_js_iterator(keys_method(elt[$B.KW][i]))){add_key(key,$B.$getitem1(elt[$B.KW][i],key))}}}}
+for(let key of $B.make_js_iterator($B.$call(keys_method,elt[$B.KW][i]))){add_key(key,$B.$call(getitem,elt[$B.KW][i],key))}}}}
 if(too_many_pos > 0){var plural=positional_length==1 ? '' :'s'
 var nb=positional_length+too_many_pos
 var report=positional_length
@@ -5507,17 +5502,47 @@ _b_.sorted=function(){var $=$B.args('sorted',1,{iterable:null},arguments,null,nu
 var _list=_b_.list.$factory($.iterable)
 _b_.list.tp_funcs.sort(_list,$B.dict2kwarg($.kw))
 return _list}
+function cs_add(sum,x){var t=sum.hi+x
+sum.lo+=Math.abs(sum.hi)>=Math.abs(x)?
+(sum.hi-t)+x :
+(x-t)+sum.hi
+sum.hi=t}
+function cs_value(sum){
+return sum.lo && isFinite(sum.lo)? sum.hi+sum.lo :sum.hi}
 _b_.sum=function(){var $=$B.args('sum',2,{iterable:null,start:null},arguments,{start:0},null,null)
 var iterable=$.iterable,start=$.start
-if($B.$isinstance(start,[_b_.str,_b_.bytes])){$B.RAISE(_b_.TypeError,"sum() can't sum bytes"+
+if($B.$isinstance(start,_b_.str)){$B.RAISE(_b_.TypeError,"sum() can't sum strings"+
+" [use ''.join(seq) instead]")}
+if($B.$isinstance(start,_b_.bytes)){$B.RAISE(_b_.TypeError,"sum() can't sum bytes"+
 " [use b''.join(seq) instead]")}
-var res=start
+if($B.$isinstance(start,_b_.bytearray)){$B.RAISE(_b_.TypeError,"sum() can't sum bytearray"+
+" [use b''.join(seq) instead]")}
+var res=start,done={},item,add=(x,y)=> $B.rich_op('__add__',x,y),take=()=>{
+try{
+return next(iterable)}catch(err){if($B.is_exc(err,[_b_.StopIteration])){return done}
+throw err}}
 iterable=iter(iterable)
-while(true){try{
-var _item=next(iterable)
-res=$B.rich_op('__add__',res,_item)}catch(err){if($B.is_exc(err,[_b_.StopIteration])){break}else{
-throw err}}}
-return res}
+if($B.get_class(res)===_b_.int){while(true){item=take()
+if(item===done){return res}
+res=add(res,item)
+if($B.get_class(item)!==_b_.int &&
+$B.get_class(item)!==_b_.bool){break}}}
+if($B.get_class(res)===_b_.float){let re={hi:res.value,lo:0}
+while(true){item=take()
+if(item===done){return $B.fast_float(cs_value(re))}
+if($B.get_class(item)===_b_.float){cs_add(re,item.value)}else if($B.$isinstance(item,_b_.int)){cs_add(re,_b_.int.nb_float(item).value)}else{
+res=add($B.fast_float(cs_value(re)),item)
+break}}}
+if($B.get_class(res)===_b_.complex){let re={hi:res.real.value,lo:0},im={hi:res.imag.value,lo:0},total=()=> $B.make_complex(cs_value(re),cs_value(im))
+while(true){item=take()
+if(item===done){return total()}
+if($B.get_class(item)===_b_.complex){cs_add(re,item.real.value)
+cs_add(im,item.imag.value)}else if($B.$isinstance(item,_b_.int)){cs_add(re,_b_.int.nb_float(item).value)}else if($B.$isinstance(item,_b_.float)){cs_add(re,$B.float_value(item).value)}else{
+res=add(total(),item)
+break}}}
+while(true){item=take()
+if(item===done){return res}
+res=add(res,item)}}
 var $$super=_b_.super
 function supercheck(type,obj){
 if($B.is_type(obj)&& _b_.issubclass(obj,type)){return obj}
@@ -5620,9 +5645,10 @@ _b_.zip.tp_iter=function(self){return self}
 _b_.zip.tp_iternext=function*(self){var res=[],len=self.iters.length
 if(len==0){return}
 for(var i=0;i < len;i++){var v=self.iters[i].next()
-if(v.done){if(self.strict){if(i > 0){$B.RAISE(_b_.ValueError,`zip() argument ${i + 1} is longer than argument ${i}`)}else{
+if(v.done){if(self.strict){var plural=n=> n==1 ? ' 1' :`s 1-${n}`
+if(i > 0){$B.RAISE(_b_.ValueError,`zip() argument ${i + 1} is shorter than argument${plural(i)}`)}else{
 for(var j=1;j < len;j++){var v1=self.iters[j].next()
-if(! v1.done){$B.RAISE(_b_.ValueError,`zip() argument ${j + 1} is longer than argument ${i + 1}`)}}}}
+if(! v1.done){$B.RAISE(_b_.ValueError,`zip() argument ${j + 1} is longer than argument${plural(j)}`)}}}}
 return}
 res.push(v.value)}
 yield $B.fast_tuple(res)}
@@ -6586,6 +6612,8 @@ _b_.BaseExceptionGroup.tp_str=function(self){return `${self.msg} (${self.excs.le
 _b_.BaseExceptionGroup.tp_init=function(self,...args){$B.check_no_kw('__init__',arguments)
 _b_.BaseException.tp_init(self,...args)}
 _b_.BaseExceptionGroup.tp_new=function(cls,args,kw){var[message,exceptions]=$B.unpack_args('BaseExceptionGroup',args,['message','exceptions'],{})
+if(! $B.is_str(message)){$B.RAISE(_b_.TypeError,"BaseExceptionGroup.__new__() argument 1 "+
+`must be str, not ${$B.class_name(message)}`)}
 if(! $B.is_sequence(exceptions)){$B.RAISE(_b_.TypeError,"second argument (exceptions) must be a sequence")}
 exceptions=$B.fast_tuple(Array.from($B.make_js_iterator(exceptions)))
 if(exceptions.length==0){$B.RAISE(_b_.ValueError,"second argument (exceptions) must be a non-empty sequence"
@@ -6610,24 +6638,60 @@ var BaseExceptionGroup_funcs=_b_.BaseExceptionGroup.tp_funcs={}
 BaseExceptionGroup_funcs.__class_getitem__=function(){return $B.$class_getitem.apply(null,arguments)}
 BaseExceptionGroup_funcs.derive=function(self,excs){var init_args=$B.fast_tuple([self.msg,excs])
 return $B.$call(_b_.BaseExceptionGroup,...init_args)}
-BaseExceptionGroup_funcs.split=function(self,condition){
-var matching_excs=[],non_matching_excs=[]
-for(var exc of self.excs){if($B.$isinstance(exc,_b_.BaseExceptionGroup)){var subsplit=BaseExceptionGroup_funcs.split(exc,condition),matching=subsplit[0],non_matching=subsplit[1]
-if(matching===_b_.None){non_matching_excs.push(exc)}else if(matching.excs.length==exc.excs.length){matching_excs.push(exc)}else{
-if(matching.excs.length > 0){matching_excs=matching_excs.concat(matching)}
-if(non_matching.excs.length > 0){non_matching_excs=non_matching_excs.concat(non_matching)}}}else if(condition(exc)){matching_excs.push(exc)}else{
-non_matching_excs.push(exc)}}
-if(matching_excs.length==0){matching_excs=_b_.None}
-if(non_matching_excs.length==0){non_matching_excs=_b_.None}
-var res=[]
-for(var item of[matching_excs,non_matching_excs]){if(item===_b_.None){res.push(item)}else{
-var eg=_b_.BaseExceptionGroup.tp_new(_b_.BaseExceptionGroup,[self.msg,$B.$list(item)])
-eg.__cause__=self.__cause__
-eg.__context__=self.__context__
-eg.__traceback__=self.__traceback__
-res.push(eg)}}
-return $B.fast_tuple(res)}
-BaseExceptionGroup_funcs.subgroup=function(self,condition){return BaseExceptionGroup_funcs.split(self,condition)[0]}
+function is_exception_class(obj){return $B.is_type(obj)&& _b_.issubclass(obj,_b_.BaseException)}
+function group_matcher(condition){
+if($B.$isinstance(condition,_b_.tuple)?
+condition.every(is_exception_class):
+is_exception_class(condition)){return exc=> $B.is_exc(exc,condition)}
+if(_b_.callable(condition)&& ! $B.is_type(condition)){return exc=> $B.$bool($B.$call(condition,exc))}
+$B.RAISE(_b_.TypeError,"expected an exception type, a tuple of "+
+"exception types, or a callable (other than a class)")}
+function group_subset(group,excs){
+if(excs.length==0){return _b_.None}
+var res=$B.$call($B.$getattr(group,'derive'),$B.$list(excs))
+if(! $B.$isinstance(res,_b_.BaseExceptionGroup)){$B.RAISE(_b_.TypeError,"derive must return an instance of BaseExceptionGroup")}
+res.__cause__=group.__cause__
+res.__context__=group.__context__
+res.__traceback__=group.__traceback__
+var notes=$B.$getattr(group,'__notes__',$B.NULL)
+if(notes !==$B.NULL && $B.is_sequence(notes)){$B.$setattr(res,'__notes__',$B.$list(Array.from($B.make_js_iterator(notes))))}
+return res}
+function group_split(exc,match){
+if(match(exc)){return[exc,_b_.None]}
+if(! $B.$isinstance(exc,_b_.BaseExceptionGroup)){return[_b_.None,exc]}
+var matching=[],rest=[]
+for(var one of exc.excs){var parts=group_split(one,match)
+if(parts[0]!==_b_.None){matching.push(parts[0])}
+if(parts[1]!==_b_.None){rest.push(parts[1])}}
+return[group_subset(exc,matching),group_subset(exc,rest)]}
+BaseExceptionGroup_funcs.split=function(self,condition){return $B.fast_tuple(group_split(self,group_matcher(condition)))}
+BaseExceptionGroup_funcs.subgroup=function(self,condition){return group_split(self,group_matcher(condition))[0]}
+$B.except_star_split=function(exc,type){
+for(var one of $B.$isinstance(type,_b_.tuple)? type :[type]){if(! is_exception_class(one)){$B.RAISE(_b_.TypeError,"catching classes that do not inherit "+
+"from BaseException is not allowed")}}
+for(var one of $B.$isinstance(type,_b_.tuple)? type :[type]){if(_b_.issubclass(one,_b_.BaseExceptionGroup)){$B.RAISE(_b_.TypeError,"catching ExceptionGroup with except* "+
+"is not allowed. Use except instead.")}}
+if(exc===_b_.None){return[_b_.None,_b_.None]}
+var is_group=$B.$isinstance(exc,_b_.BaseExceptionGroup)
+if($B.is_exc(exc,type)){if(is_group){return[exc,_b_.None]}
+var wrapped=_b_.BaseExceptionGroup.$factory('',[exc])
+wrapped.__traceback__=exc.__traceback__
+return[wrapped,_b_.None]}
+if(is_group){return $B.$call($B.$getattr(exc,'split'),type)}
+return[_b_.None,exc]}
+function group_leaves(exc,leaves){if($B.$isinstance(exc,_b_.BaseExceptionGroup)){for(var one of exc.excs){group_leaves(one,leaves)}}else{
+leaves.add(exc)}}
+$B.except_star_raised=function(orig,matches,raised,rest){
+var excs=rest===_b_.None ? raised :[...raised,rest]
+if(! $B.$isinstance(orig,_b_.BaseExceptionGroup)){return excs[0]?? _b_.None}
+var reraised=new Set(),anew=[]
+for(var exc of excs){if(exc===rest ||matches.includes(exc)){group_leaves(exc,reraised)}else{
+anew.push(exc)}}
+var remains=group_split(orig,exc=> reraised.has(exc))[0]
+if(anew.length==0){return remains}
+if(remains !==_b_.None){anew.push(remains)}
+return anew.length==1 ? anew[0]:
+_b_.BaseExceptionGroup.$factory('',anew)}
 _b_.BaseExceptionGroup.classmethods=["__class_getitem__"]
 _b_.BaseExceptionGroup.tp_methods=["derive","split","subgroup"]
 _b_.BaseExceptionGroup.tp_members=[["message",$B.TYPES.OBJECT,"msg",1],["exceptions",$B.TYPES.OBJECT,"excs",1]
@@ -7005,7 +7069,7 @@ safe=(typeof start=="number" && typeof stop=="number" &&
 typeof step=="number")
 return{
 ob_type:cls,start:start,stop:stop,step:step,$is_range:true,$safe:safe}}
-_b_.range.nb_bool=function(self){return self.start !=self.end}
+_b_.range.nb_bool=function(self){return self.step > 0 ? self.start < self.stop :self.start > self.stop}
 _b_.range.mp_length=function(self){var len,start=$B.to_bigint(self.start),stop=$B.to_bigint(self.stop),step=$B.to_bigint(self.step)
 if(self.step > 0){if(self.start >=self.stop){return 0}
 len=1n+(stop-start-1n)/step}else{
@@ -9006,8 +9070,8 @@ var delim=upper ? 'E' :'e',exp_fmt=floating_point_exponential_format(value,upper
 parts[0]=remove_zeros(parts[0])
 res=parts.join(delim)}
 return format_padding(format_sign(val,flags)+res,flags)}
-var roundDownToFixed=$B.roundDownToFixed=function(v,d){if(d==0 && v.toString().indexOf('e')>-1){
-return BigInt(v).toString()}
+var roundDownToFixed=$B.roundDownToFixed=function(v,d){if(Math.abs(v)>=1e21){
+return BigInt(v).toString()+(d > 0 ? '.'+'0'.repeat(d):'')}
 const mul=Math.pow(10,d)
 var is_neg=v < 0
 if(is_neg){v=-v}
@@ -9616,10 +9680,11 @@ return 56+(len+1)*kind}
 str_funcs.capitalize=function(self){var _self=to_string(self)
 if(_self.length==0){return ""}
 return $B.String(_self.charAt(0).toUpperCase()+_self.substr(1).toLowerCase())}
-str_funcs.casefold=function(self){var res="",char,cf,_self=to_string(self),chars=to_chars(_self)
+str_funcs.casefold=function(self){$B.check_nb_args_no_kw('str.casefold',1,arguments)
+var res="",char,cf,_self=to_string(self),chars=to_chars(_self)
 for(var i=0,len=chars.length;i < len;i++){char=chars[i]
-cf=$B.unicode_casefold[char]
-if(cf){for(let cp of cf){res+=String.fromCharCode(cp)}}else{
+cf=$B.unicode_casefold[char.codePointAt(0)]
+if(cf){for(let cp of cf){res+=String.fromCodePoint(cp)}}else{
 res+=char.toLowerCase()}}
 return $B.String(res)}
 str_funcs.center=function(){var $=$B.args("center",3,{self:null,width:null,fillchar:null},arguments,{fillchar:" "},null,null),self=to_string($.self),marg=$.width-str.mp_length(self)
@@ -10548,10 +10613,11 @@ if(fmt.type && 'eEfFgG%'.indexOf(fmt.type)!=-1){
 return _b_.float.tp_funcs.__format__(_b_.int.nb_float(self),format_spec)}
 fmt.align=fmt.align ||">"
 var res=preformat(self,fmt)
-if(fmt.comma){var sign=res[0]=="-" ? "-" :"",rest=res.substr(sign.length),len=rest.length,nb=Math.ceil(rest.length/3),chunks=[]
-for(var i=0;i < nb;i++){chunks.push(rest.substring(len-3*i-3,len-3*i))}
+if(fmt.comma){
+var size='boxX'.includes(fmt.type)? 4 :3,lead=res.match(/^[-+ ]?(0[bBoOxX])?/)[0],rest=res.substr(lead.length),len=rest.length,nb=Math.ceil(rest.length/size),chunks=[]
+for(var i=0;i < nb;i++){chunks.push(rest.substring(len-size*i-size,len-size*i))}
 chunks.reverse()
-res=sign+chunks.join(",")}
+res=lead+chunks.join(fmt.grouping_option)}
 return $B.format_width(res,fmt)}
 int_funcs.__getnewargs__=function(self){return $B.fast_tuple([int_value(self)])}
 int_funcs.__round__=function(self){var $=$B.args('__round__',2,{self:null,ndigits:null},arguments,{ndigits:_b_.None},null,null)
@@ -10710,6 +10776,11 @@ case ' ':
 return(val >=0 ||isNaN(val))? ' ' :''}
 if(flags.space){if(val >=0){return " "}}
 return ''}
+function exponential(value,precision){var res=value.toExponential(precision),exact=value.toExponential(100),at=exact.indexOf('e'),digits=exact.slice(0,at).replace(/[-.]/g,''),kept=digits.slice(0,precision+1)
+if(/^50*$/.test(digits.slice(precision+1))&&
+'02468'.includes(kept[kept.length-1])){return(value < 0 ? '-' :'')+kept[0]+
+(precision > 0 ? '.'+kept.slice(1):'')+exact.slice(at)}
+return res}
 function preformat(self,fmt){var value=self.value
 if(fmt.empty){return _b_.str.$factory(self)}
 if(fmt.type && 'eEfFgGn%'.indexOf(fmt.type)==-1){$B.RAISE(_b_.ValueError,"Unknown format code '"+fmt.type+
@@ -10719,14 +10790,14 @@ if(isNaN(value)){special="efg".indexOf(fmt.type)>-1 ? "nan" :"NAN"}else if(value
 if(special){return format_sign(value,fmt)+special}
 if(fmt.precision===undefined && fmt.type !==undefined){fmt.precision=6}
 if(fmt.type=="%"){value*=100}
-if(fmt.type=="e"){let res=value.toExponential(fmt.precision),exp=parseInt(res.substr(res.search("e")+1))
+if(fmt.type=="e"){let res=exponential(value,fmt.precision),exp=parseInt(res.substr(res.search("e")+1))
 if(Math.abs(exp)< 10){res=res.substr(0,res.length-1)+"0"+
 res.charAt(res.length-1)}
 return res}
 var res
 if(fmt.precision !==undefined){
 let prec=fmt.precision
-if(prec==0){return Math.round(value)+""}
+if(prec==0){return $B.roundDownToFixed(value,0)}
 res=$B.roundDownToFixed(value,prec)
 let pt_pos=res.indexOf(".")
 if(fmt.type !==undefined &&
@@ -10752,7 +10823,7 @@ let is_neg=res.startsWith('-'),point_pos=is_neg ? 2 :1,mant=res.substr(0,point_p
 res.substr(point_pos)
 return `${mant}e+${exp}`}
 fmt.type=undefined}else{
-let res1=value.toExponential(fmt.precision-1),exp=parseInt(res1.substr(res1.search("e")+1))
+let res1=exponential(value,fmt.precision-1),exp=parseInt(res1.substr(res1.search("e")+1))
 if(exp <-4 ||exp >=fmt.precision-1){var elts=res1.split("e")
 while(elts[0].endsWith("0")){elts[0]=elts[0].substr(0,elts[0].length-1)}
 res=elts.join("e")}}}else{
@@ -10770,10 +10841,11 @@ var pf=preformat(self,fmt)
 if(fmt.z && Object.is(parseFloat(pf),-0)){
 pf=pf.substr(1)}
 var raw=pf.split('.'),_int=raw[0]
-if(fmt.comma){var len=_int.length,nb=Math.ceil(_int.length/3),chunks=[]
-for(var i=0;i < nb;i++){chunks.push(_int.substring(len-3*i-3,len-3*i))}
+if(fmt.comma){
+var[,lead,digits,tail]=_int.match(/^(\D*)(\d*)(.*)$/),len=digits.length,nb=Math.ceil(len/3),chunks=[]
+for(var i=0;i < nb;i++){chunks.push(digits.substring(len-3*i-3,len-3*i))}
 chunks.reverse()
-raw[0]=chunks.join(",")}
+raw[0]=lead+chunks.join(fmt.grouping_option)+tail}
 return $B.format_width(raw.join("."),fmt)}
 float.$getnewargs=function(self){return $B.fast_tuple([float_value(self)])}
 var nan_hash=$B.$py_next_hash--
@@ -11073,7 +11145,7 @@ _b_.float.nb_positive=function(self){return fast_float(+self.value)}
 _b_.float.nb_absolute=function(self){check_self_is_float(self,'__abs__')
 return fast_float(Math.abs(self.value))}
 _b_.float.nb_bool=function(self){check_self_is_float(self,'__bool__')
-return _b_.bool.$factory(self.value)}
+return self.value !=0}
 _b_.float.nb_int=function(self){check_self_is_float(self,'__int__')
 if(Number.isInteger(self.value)){var res=BigInt(self.value),res_num=Number(res)
 return Number.isSafeInteger(res_num)?
@@ -12538,7 +12610,7 @@ return res}
 list_funcs.remove=function(self){var $=$B.args("remove",2,{self:null,x:null},arguments)
 for(var i=0,len=$.self.length;i < len;i++){if($B.is_or_equals($.self[i],$.x)){$.self.splice(i,1)
 return _b_.None}}
-$B.RAISE(_b_.ValueError,_b_.str.$factory($.x)+" is not in list")}
+$B.RAISE(_b_.ValueError,"list.remove(x): x not in list")}
 list_funcs.reverse=function(self){var _len=self.length-1,i=parseInt(self.length/2)
 while(i--){var buf=self[i]
 self[i]=self[_len-i]
@@ -16976,8 +17048,11 @@ function make_args(scopes){var js='',named_args=[],named_kwargs=[],starred_kwarg
 var kwds=new Set()
 for(var keyword of this.keywords){if(keyword.arg){if(kwds.has(keyword.arg)){compiler_error(keyword,`keyword argument repeated: ${keyword.arg}`)}
 kwds.add(keyword.arg)
-named_kwargs.push(
-`${keyword.arg}: ${$B.js_from_ast(keyword.value, scopes)}`)}else{
+var value=$B.js_from_ast(keyword.value,scopes)
+if(starred_kwargs.length > 0){
+starred_kwargs.push(
+`_b_.dict.$literal([['${keyword.arg}', ${value}]])`)}else{
+named_kwargs.push(`${keyword.arg}: ${value}`)}}else{
 starred_kwargs.push($B.js_from_ast(keyword.value,scopes))}}
 var args_list=[]
 for(let arg of this.args){if(arg instanceof $B.ast.Starred){var starred_arg=$B.js_from_ast(arg.value,scopes)
@@ -17959,6 +18034,15 @@ var expect_str=true
 for(var value of this.values){if(value instanceof $B.ast.Constant){items.push(value.to_js(scopes))}else if(value instanceof $B.ast.Interpolation){items.push(value.to_js(scopes))}else{
 throw Error('unexpected type inf temmplate')}}
 return js+`${items.join(', ')})\n`}
+function handler_to_js(handler,scopes,try_scope,err){if(! handler.name){return add_body(handler.body,scopes)+'\n'}
+bind(handler.name,scopes)
+var mangled=mangle(scopes,try_scope,handler.name)
+var js=prefix+`locals.${mangled} = ${err}\n`+prefix+'try {\n'
+indent()
+js+=add_body(handler.body,scopes)+'\n'
+dedent()
+return js+prefix+'} finally {\n'+
+prefix+tab+`delete locals.${mangled}\n`+prefix+'}\n'}
 $B.ast.Try.prototype.to_js=function(scopes){compiler_check(this)
 var id=make_id(),has_except_handlers=this.handlers.length > 0,has_else=this.orelse.length > 0,has_finally=this.finalbody.length > 0
 var js=prefix+`$B.set_lineno(frame, ${this.lineno})\n`+
@@ -17975,6 +18059,9 @@ if(has_except_handlers){var err='err'+id
 js+=prefix+'}' 
 js+=`catch(${err}){\n`
 indent()
+js+=prefix+`var previous${id} = frame.$current_exception\n`+
+prefix+'try {\n'
+indent()
 js+=prefix+`$B.set_exc_and_trace(frame, ${err})\n`
 if(has_else){js+=prefix+`failed${id} = true\n`}
 var first=true,has_untyped_except=false
@@ -17989,18 +18076,17 @@ js+=`)){\n`}else{
 has_untyped_except=true
 js+='){\n'}
 indent()
-if(handler.name){bind(handler.name,scopes)
-var mangled=mangle(scopes,try_scope,handler.name)
-js+=prefix+`locals.${mangled} = ${err}\n`}
-js+=add_body(handler.body,scopes)+'\n'
-if(!($B.last(handler.body)instanceof $B.ast.Return)){
-js+=prefix+'$B.del_exc(frame)\n'
-js+=prefix+`$B.frame_obj = save_frame_obj_${id}\n`}
+js+=handler_to_js(handler,scopes,try_scope,err)
+if(!($B.last(handler.body)instanceof $B.ast.Return)){js+=prefix+`$B.frame_obj = save_frame_obj_${id}\n`}
 dedent()}
 if(! has_untyped_except){
 js+=prefix+`} else {\n`+
 prefix+tab+`throw ${err}\n`}
 js+=prefix+'}\n'
+dedent()
+js+=prefix+'} finally {\n'+
+prefix+tab+`frame.$current_exception = previous${id}\n`+
+prefix+'}\n'
 dedent()}
 if(has_else ||has_finally){js+=prefix+'}' 
 js+='finally{\n'
@@ -18035,60 +18121,74 @@ js+=prefix+'}\n' }else{
 js+=prefix+'}\n' }
 scopes.pop()
 return js}
+function check_except_star_body(statements,in_loop){
+for(var statement of statements){if(statement instanceof $B.ast.Return ||
+(! in_loop &&(statement instanceof $B.ast.Break ||
+statement instanceof $B.ast.Continue))){compiler_error(statement,"'break', 'continue' and 'return' "+
+"cannot appear in an except* block")}
+if(statement instanceof $B.ast.FunctionDef ||
+statement instanceof $B.ast.AsyncFunctionDef ||
+statement instanceof $B.ast.ClassDef){continue}
+var is_loop=statement instanceof $B.ast.For ||
+statement instanceof $B.ast.AsyncFor ||
+statement instanceof $B.ast.While
+check_except_star_body(statement.body ??[],in_loop ||is_loop)
+for(var block of[statement.orelse,statement.finalbody]){check_except_star_body(block ??[],in_loop)}
+for(var part of[...(statement.handlers ??[]),...(statement.cases ??[])]){check_except_star_body(part.body,in_loop)}}}
 $B.ast.TryStar.prototype.to_js=function(scopes){
 var id=make_id(),has_except_handlers=this.handlers.length > 0,has_else=this.orelse.length > 0,has_finally=this.finalbody.length > 0
 var js=prefix+`$B.set_lineno(frame, ${this.lineno})\n`+
 prefix+`try {\n`
 indent()
 js+=prefix+`var stack_length_${id} = $B.count_frames()\n`
-if(has_finally){js+=prefix+`var save_frame_obj_${id} = $B.frame_obj\n`}
+js+=prefix+`var save_frame_obj_${id} = $B.frame_obj\n`
 if(has_else){js+=prefix+`var failed${id} = false\n`}
 var try_scope=copy_scope($B.last(scopes))
 scopes.push(try_scope)
 js+=add_body(this.body,scopes)+'\n'
-if(has_except_handlers){var err='err'+id
+if(has_except_handlers){var err='err'+id,split='split'+id,matches='matches'+id,raised='raised'+id,previous='previous'+id
 dedent()
 js+=prefix+'}' 
 js+=`catch(${err}){\n`
 indent()
-js+=prefix+`$B.set_exc_and_trace(frame, ${err})\n`+
-prefix+`if (! $B.$isinstance(${err}, _b_.BaseExceptionGroup)) {\n`+
-prefix+tab+`${err} = _b_.BaseExceptionGroup.$factory(_b_.None, [${err}])\n`+
-prefix+'}\n'+
-prefix+`function fake_split(exc, condition) {\n`+
-prefix+tab+`return condition(exc) ? `+
-`$B.fast_tuple([exc, _b_.None]) : $B.fast_tuple([_b_.None, exc])\n`+
-prefix+'}\n'
+js+=prefix+`var ${previous} = frame.$current_exception\n`+
+prefix+`$B.set_exc_and_trace(frame, ${err})\n`+
+prefix+`${err} = frame.$current_exception\n`+
+prefix+`$B.frame_obj = save_frame_obj_${id}\n`+
+prefix+`var orig${id} = ${err},\n`+
+prefix+tab+`${matches} = [],\n`+
+prefix+tab+`${raised} = []\n`
 if(has_else){js+=prefix+`failed${id} = true\n`}
-for(var handler of this.handlers){js+=prefix+`$B.set_lineno(frame, ${handler.lineno})\n`
-if(handler.type){js+=prefix+"var condition = function(exc) {\n"+
-prefix+tab+"return $B.$isinstance(exc, "+
+for(var handler of this.handlers){check_except_star_body(handler.body,false)
+js+=prefix+`$B.set_lineno(frame, ${handler.lineno})\n`+
+prefix+`var ${split} = $B.except_star_split(${err}, `+
 `${$B.js_from_ast(handler.type, scopes)})\n`+
-prefix+"}\n"+
-prefix+`var klass = $B.get_class(${err}),\n`
+prefix+`${err} = ${split}[1]\n`+
+prefix+`if (${split}[0] !== _b_.None) {\n`
 indent()
-js+=prefix+`split_method = $B.$getattr(klass, 'split'),\n`+
-prefix+`split = $B.$call(split_method, ${err}, condition),\n`+
-prefix+'matching = split[0],\n'+
-prefix+'rest = split[1]\n'
-dedent()
-js+=prefix+'if (matching !== _b_.None) {\n'
-indent()
-js+=prefix+'for (var err of matching.excs) {\n'
-indent()
+js+=prefix+`${matches}.push(${split}[0])\n`+
+prefix+`$B.set_exc(${split}[0], frame)\n`
+var mangled=null
 if(handler.name){bind(handler.name,scopes)
-var mangled=mangle(scopes,try_scope,handler.name)
-js+=prefix+`locals.${mangled} = ${err}\n`}
+mangled=mangle(scopes,try_scope,handler.name)
+js+=prefix+`locals.${mangled} = ${split}[0]\n`}
+js+=prefix+'try {\n'
+indent()
 js+=add_body(handler.body,scopes)+'\n'
-if(!($B.last(handler.body)instanceof $B.ast.Return)){
-js+=prefix+'$B.del_exc(frame)\n'}
 dedent()
+js+=prefix+`} catch(${raised}_err) {\n`+
+prefix+tab+`${raised}.push($B.exception(${raised}_err))\n`+
+prefix+tab+`$B.frame_obj = save_frame_obj_${id}\n`
+if(mangled !==null){js+=prefix+'} finally {\n'+
+prefix+tab+`delete locals.${mangled}\n`}
 js+=prefix+'}\n'
 dedent()
-js+=prefix+'}\n'
-js+=prefix+`${err} = rest\n`}}
-js+=prefix+`if (${err} !== _b_.None) {\n`+
-prefix+tab+`throw ${err}\n`+
+js+=prefix+'}\n'}
+js+=prefix+`frame.$current_exception = ${previous}\n`+
+prefix+`var final${id} = $B.except_star_raised(orig${id}, `+
+`${matches}, ${raised}, ${err})\n`+
+prefix+`if (final${id} !== _b_.None) {\n`+
+prefix+tab+`throw final${id}\n`+
 prefix+'}\n'
 dedent()}
 if(has_else ||has_finally){js+=prefix+'}' 

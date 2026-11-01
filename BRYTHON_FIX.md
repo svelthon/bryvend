@@ -1,12 +1,10 @@
 # Patches applied to the vendored Brython
 
 `brython_runtime.js` and `brython_compiler.js` are cut from one bundle, built
-from Brython's master of 11 September 2026 plus one hundred and sixty proposed commits
-(`metaclass-getattribute-args`, `iterator-setstate` and `getitem-binding` in two, as amended for their PRs) and five merged
-upstream since (#3022, #2996, #2989, #2982, #3125), with **five** edits
-made in the file itself afterwards, and one proposed commit,
-`property-delete-without-setter`, applied in the file itself until the next
-re-vendoring takes it from its branch. The wrapper, the integer format and the
+from Brython's master of 11 September 2026 plus one hundred and seventy-eight proposed commits
+(`metaclass-getattribute-args`, `iterator-setstate` and `getitem-binding` in two, as amended for their PRs) and seven merged
+upstream since (#3022, #2996, #2989, #2982, #3125, #3047, #3119), with **five** edits
+made in the file itself afterwards. The wrapper, the integer format and the
 `__call__` binding carry a `/* BRYVEND patch, see BRYTHON_FIX.md */` comment,
 the only way to find them again in 1.4 MB; `@vite-ignore` *is* a comment, so
 it finds itself, and the CommonJS export is a line that is no longer there.
@@ -154,6 +152,25 @@ written against:
 | `argument-has-own-property` | the arguments of a call are asked through `Object.hasOwn`: a function with a parameter `hasOwnProperty`, given a keyword or a default, and a builtin given a keyword `hasOwnProperty`, raised a JavascriptError where CPython binds or refuses it. The function's half is on `dict-has-own-property-key` |
 | `pattern-keyword-has-own-property` | a class pattern's keywords are asked through `Object.hasOwn`, where `case P(1, hasOwnProperty=2)` raised a JavascriptError |
 | `unpacked-keyword-inherited-name` | a keyword unpacked into a builtin is told given twice by `Object.hasOwn`, where `kwa[key] !== undefined` found `constructor`, `toString` or `valueOf` on `Object.prototype`: `'{x}'.format(**{'constructor': 2}, x=1)` raised `got multiple values` |
+| `float-nan-bool` (#3047, merged) | `bool(float("nan"))` is True: a float is false only when it equals zero |
+| `int-format-underscore-grouping` (#3119, merged) | an int groups its digits by 4 with `_` in bases 2, 8 and 16 |
+| `float-format-precision-0-half-even` | `format(2.5, ".0f")` rounds an exact half to even, where `Math.round` rounded it up |
+| `except-name-unbound` | the name of `except ... as` is unbound when the handler ends |
+| `float-format-exponent-half-even` | `format(2.5, ".0e")` rounds an exact half to even, where `toExponential` picks the larger digit |
+| `float-format-large-fixed` | a float from 1e21 is written in full in the fixed format, where `toFixed` answers with an `e`: `f"{1e22:f}"` gave `1e+22.000000` |
+| `float-format-grouping` | a float's digits are grouped by the separator asked for and after its sign: `f"{1234567.5:_}"` gave commas |
+| `range-truth` | `bool(range(0))` is False: `nb_bool` compared the start to a field that does not exist |
+| `sum-compensated-floats` | `sum()` of floats, and of complex numbers, keeps what each addition loses: `sum([0.1] * 10)` is `1.0` |
+| `sum-start-string-message` | what `sum()` refuses as a start is named: strings, bytes, bytearray |
+| `zip-strict-message` | `zip(strict=True)` tells a shorter argument from a longer one, and names `arguments 1-2` |
+| `list-remove-message` | `list.remove(x): x not in list`, where the message converted `x` |
+| `double-star-dict-subclass` | `f(**OrderedDict(a=1))`, and `**` of any subclass of dict: its `keys` and `__getitem__` are called through `$B.$call`, where a raw JavaScript call raised a JavascriptError |
+| `keyword-arguments-order` | keywords and `**` of a call keep their order, and are evaluated in it |
+| `keyword-repeated-by-star` | a keyword repeated by `**` in a call to a Python function is refused, where the last one won |
+| `except-star-group` | `except*` runs a handler once, on the subgroup it takes, then raises what the handlers raised beside what remains; `split()` and `subgroup()` take a type, a tuple of types or a callable; a `return`, `break` or `continue` is refused in its handler |
+| `handler-restores-exception` | a `try` nested in a handler gives back the exception being handled: a bare `raise` after it raised a RuntimeError |
+| `casefold-full` | `str.casefold` reads its table by code point, where a character found nothing, and the table holds the common folds: `"straße".casefold()` is `"strasse"` |
+| `isdigit-superscripts` | the search in the tables of code points finds their first and last items: `"²".isdigit()` is True |
 
 It used to be ten. Eight went upstream, one branch each, and the re-vendoring of
 2026-09-11 took them back as ordinary Brython:
