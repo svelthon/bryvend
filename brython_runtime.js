@@ -6352,10 +6352,12 @@ return}
 var exc_class=$B.make_builtin_class(exc_name,[base])
 $B.set_func_names(exc_class,'builtins')}
 function check_no_keywords(obj,kw){if(_b_.len(kw)){$B.RAISE(_b_.TypeError,`${$B.class_name(obj)}() takes no keyword arguments`)}}
-_b_.BaseException.tp_repr=function(self){var args=''
+_b_.BaseException.tp_repr=function(self){if(self.args.length > 1){return $B.class_name(self)+_b_.repr(self.args)}
+var args=''
 if(self.args.length > 0 && self.args[0]!==_b_.None){args=_b_.repr(self.args[0])}
 return `${$B.class_name(self)}(${args})`}
-_b_.BaseException.tp_str=function(self){if(self.args.length > 0 && self.args[0]!==_b_.None){return _b_.str.$factory(self.args[0])}
+_b_.BaseException.tp_str=function(self){if(self.args.length > 1){return _b_.str.$factory(self.args)}
+if(self.args.length > 0 && self.args[0]!==_b_.None){return _b_.str.$factory(self.args[0])}
 return ''}
 _b_.BaseException.tp_init=function(self,...args){var $=$B.args('__init__',1,{self:null},arguments,null,'args','kw')
 check_no_keywords($.self,$.kw)
@@ -6434,6 +6436,11 @@ for(var i=0;i < attrs.length;i++){if(details[i]!==undefined){if(! $B.$isinstance
 `'${$B.class_name(details[i])}'`)}
 _self[attrs[i]]=details[i]}else{
 _self[attrs[i]]=_b_.None}}}
+_b_.SyntaxError.tp_str=function(self){
+var msg=_b_.str.$factory(self.msg),filename=$B.$isinstance(self.filename,_b_.str)?
+_b_.str.$factory(self.filename).split('/').pop():null,lineno=$B.exact_type(self.lineno,_b_.int)? self.lineno :null
+if(filename !==null && lineno !==null){return `${msg} (${filename}, line ${lineno})`}else if(filename !==null){return `${msg} (${filename})`}else if(lineno !==null){return `${msg} (line ${lineno})`}
+return msg}
 _b_.SyntaxError.tp_members=[["msg",$B.TYPES.OBJECT,'msg',0],["filename",$B.TYPES.OBJECT,"filename",0],["lineno",$B.TYPES.OBJECT,"lineno",0],["offset",$B.TYPES.OBJECT,"offset",0],["text",$B.TYPES.OBJECT,"text",0],["end_lineno",$B.TYPES.OBJECT,"end_lineno",0],["end_offset",$B.TYPES.OBJECT,"end_offset",0],["print_file_and_line",$B.TYPES.OBJECT,"print_file_and_line",0],["_metadata",$B.TYPES.OBJECT,"metadata",0]
 ]
 $B.set_func_names(_b_.SyntaxError,'builtins')
@@ -6462,7 +6469,7 @@ $B.attr_error=function(name,obj){var msg
 if($B.is_type(obj)){msg=`type object '${obj.tp_name}'`}else if($B.exact_type(obj,$B.module)){msg=`module '${$B.module_getattr(obj, '__name__')}'`}else{
 msg=`'${$B.class_name(obj)}' object`}
 msg+=` has no attribute '${name}'`
-return $B.$call(_b_.AttributeError,msg,[],{[$B.KW]:[{name,obj}]})}
+return $B.$call(_b_.AttributeError,msg,{[$B.KW]:[{name,obj}]})}
 _b_.NameError.tp_init=function(){var $=$B.args('__init__',1,{self:null},arguments,null,'args','kw')
 _b_.BaseException.tp_init($.self,...$.args)
 set_exception_members($.self,['name'],$.kw)}

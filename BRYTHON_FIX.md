@@ -2,8 +2,8 @@
 
 `brython_runtime.js` and `brython_compiler.js` are cut from one bundle, built
 from Brython's master of 11 September 2026 plus one hundred and seventy-eight proposed commits
-(`metaclass-getattribute-args`, `iterator-setstate` and `getitem-binding` in two, as amended for their PRs) and seven merged
-upstream since (#3022, #2996, #2989, #2982, #3125, #3047, #3119), with **five** edits
+(`metaclass-getattribute-args`, `iterator-setstate` and `getitem-binding` in two, as amended for their PRs) and nine merged
+upstream since (#3022, #2996, #2989, #2982, #3125, #3047, #3119, #3072, and master's `3afab4451`), with **five** edits
 made in the file itself afterwards. The wrapper, the integer format and the
 `__call__` binding carry a `/* BRYVEND patch, see BRYTHON_FIX.md */` comment,
 the only way to find them again in 1.4 MB; `@vite-ignore` *is* a comment, so
@@ -171,6 +171,8 @@ written against:
 | `handler-restores-exception` | a `try` nested in a handler gives back the exception being handled: a bare `raise` after it raised a RuntimeError |
 | `casefold-full` | `str.casefold` reads its table by code point, where a character found nothing, and the table holds the common folds: `"straße".casefold()` is `"strasse"` |
 | `isdigit-superscripts` | the search in the tables of code points finds their first and last items: `"²".isdigit()` is True |
+| `exception-str-several-args` (#3072, merged) | `str()` and `repr()` of an exception with several args show them all: `str(ValueError(1, 2))` is `(1, 2)` |
+| master's `3afab4451` | `$B.attr_error` hands `AttributeError` its message alone, where a stray `[]` became a second arg, which the commit above then showed |
 
 It used to be ten. Eight went upstream, one branch each, and the re-vendoring of
 2026-09-11 took them back as ordinary Brython:
