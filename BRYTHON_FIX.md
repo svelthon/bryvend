@@ -1,7 +1,7 @@
 # Patches applied to the vendored Brython
 
 `brython_runtime.js` and `brython_compiler.js` are cut from one bundle, built
-from Brython's master of 11 September 2026 plus one hundred and seventy-eight proposed commits
+from Brython's master of 11 September 2026 plus one hundred and eighty-two proposed commits
 (`metaclass-getattribute-args`, `iterator-setstate` and `getitem-binding` in two, as amended for their PRs) and nine merged
 upstream since (#3022, #2996, #2989, #2982, #3125, #3047, #3119, #3072, and master's `3afab4451`), with **five** edits
 made in the file itself afterwards. The wrapper, the integer format and the
@@ -156,6 +156,7 @@ written against:
 | `int-format-underscore-grouping` (#3119, merged) | an int groups its digits by 4 with `_` in bases 2, 8 and 16 |
 | `float-format-precision-0-half-even` | `format(2.5, ".0f")` rounds an exact half to even, where `Math.round` rounded it up |
 | `except-name-unbound` | the name of `except ... as` is unbound when the handler ends |
+| `except-name-scope` | that name is bound and unbound where `global` or `nonlocal` puts it, as `name = None` then `del name`, the way a `del` unbinds one |
 | `float-format-exponent-half-even` | `format(2.5, ".0e")` rounds an exact half to even, where `toExponential` picks the larger digit |
 | `float-format-large-fixed` | a float from 1e21 is written in full in the fixed format, where `toFixed` answers with an `e`: `f"{1e22:f}"` gave `1e+22.000000` |
 | `float-format-grouping` | a float's digits are grouped by the separator asked for and after its sign: `f"{1234567.5:_}"` gave commas |
@@ -173,6 +174,9 @@ written against:
 | `isdigit-superscripts` | the search in the tables of code points finds their first and last items: `"²".isdigit()` is True |
 | `exception-str-several-args` (#3072, merged) | `str()` and `repr()` of an exception with several args show them all: `str(ValueError(1, 2))` is `(1, 2)` |
 | master's `3afab4451` | `$B.attr_error` hands `AttributeError` its message alone, where a stray `[]` became a second arg, which the commit above then showed |
+| `syntax-error-details-any` | a `SyntaxError` keeps its details as given, `None` included, where a type check refused them: `str(SyntaxError("m", (None, 3, 1, "x")))` is `m (line 3)` |
+| `oserror-errno-strerror` | `OSError(errno, strerror[, filename[, winerror[, filename2]]])` sets `errno`, `strerror`, `filename` and `filename2`, and its `str()` is `[Errno 2] gone` |
+| `oserror-errno-subclass` | `OSError(errno, strerror)` is the subclass its errno names, by the values of the `errno` module: `OSError(2, "gone")` is a `FileNotFoundError` |
 
 It used to be ten. Eight went upstream, one branch each, and the re-vendoring of
 2026-09-11 took them back as ordinary Brython:

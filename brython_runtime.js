@@ -6429,13 +6429,8 @@ if(args.length > 1){details=args[1]
 if(details.length > 0){details=_b_.tuple.$factory(details)
 if(details.length < 4){$B.RAISE(_b_.TypeError,`function takes at least 4 arguments (${args.length} given)`)}
 if(details.length > 6){$B.RAISE(_b_.TypeError,`function takes at most 6 arguments (${args.length} given)`)}}}
-let attrs=['filename','lineno','offset','text','end_lineno','end_offset'],expected_types=[_b_.str,_b_.int,_b_.int,_b_.str,_b_.int,_b_.int]
-for(var i=0;i < attrs.length;i++){if(details[i]!==undefined){if(! $B.$isinstance(details[i],expected_types[i])){$B.RAISE(_b_.TypeError,`item #${i + 1} (${attrs[i]}) `+
-`of the second argument of SyntaxError should be `+
-`'${expected_types[i].__name__}', not `+
-`'${$B.class_name(details[i])}'`)}
-_self[attrs[i]]=details[i]}else{
-_self[attrs[i]]=_b_.None}}}
+let attrs=['filename','lineno','offset','text','end_lineno','end_offset']
+for(var i=0;i < attrs.length;i++){_self[attrs[i]]=details[i]!==undefined ? details[i]:_b_.None}}
 _b_.SyntaxError.tp_str=function(self){
 var msg=_b_.str.$factory(self.msg),filename=$B.$isinstance(self.filename,_b_.str)?
 _b_.str.$factory(self.filename).split('/').pop():null,lineno=$B.exact_type(self.lineno,_b_.int)? self.lineno :null
@@ -6444,9 +6439,33 @@ return msg}
 _b_.SyntaxError.tp_members=[["msg",$B.TYPES.OBJECT,'msg',0],["filename",$B.TYPES.OBJECT,"filename",0],["lineno",$B.TYPES.OBJECT,"lineno",0],["offset",$B.TYPES.OBJECT,"offset",0],["text",$B.TYPES.OBJECT,"text",0],["end_lineno",$B.TYPES.OBJECT,"end_lineno",0],["end_offset",$B.TYPES.OBJECT,"end_offset",0],["print_file_and_line",$B.TYPES.OBJECT,"print_file_and_line",0],["_metadata",$B.TYPES.OBJECT,"metadata",0]
 ]
 $B.set_func_names(_b_.SyntaxError,'builtins')
+_b_.OSError.tp_init=function(){var $=$B.args('OSError',1,{self:null},arguments,null,'args','kw'),self=$.self,args=$.args
+check_no_keywords(self,$.kw)
+_b_.BaseException.tp_init(self,...args)
+for(var name of['errno','strerror','filename','filename2']){self[name]=_b_.None}
+self.$errno_given=args.length >=2 && args.length <=5
+if(self.$errno_given){self.errno=args[0]
+self.strerror=args[1]
+if(args.length > 2 && args[2]!==_b_.None){self.filename=args[2]
+self.filename2=args[4]?? _b_.None
+self.args=$B.fast_tuple(args.slice(0,2))}}}
+_b_.OSError.tp_str=function(self){var head=`[Errno ${_b_.str.$factory(self.errno)}] `+
+_b_.str.$factory(self.strerror)
+if(self.filename !==_b_.None){if(self.filename2 !==_b_.None){return `${head}: ${_b_.repr(self.filename)} -> `+
+_b_.repr(self.filename2)}
+return `${head}: ${_b_.repr(self.filename)}`}
+if(self.$errno_given){return head}
+return _b_.BaseException.tp_str(self)}
+_b_.OSError.tp_members=[["errno",$B.TYPES.OBJECT,"errno",0],["strerror",$B.TYPES.OBJECT,"strerror",0],["filename",$B.TYPES.OBJECT,"filename",0],["filename2",$B.TYPES.OBJECT,"filename2",0]
+]
+$B.set_func_names(_b_.OSError,'builtins')
 _b_.EnvironmentError=_b_.OSError
 _b_.WindowsError=_b_.OSError
 _b_.IOError=_b_.OSError
+var errno_subclasses={1:'PermissionError',2:'FileNotFoundError',3:'ProcessLookupError',4:'InterruptedError',10:'ChildProcessError',11:'BlockingIOError',13:'PermissionError',17:'FileExistsError',20:'NotADirectoryError',21:'IsADirectoryError',32:'BrokenPipeError',10035:'BlockingIOError',10036:'BlockingIOError',10037:'BlockingIOError',10053:'ConnectionAbortedError',10054:'ConnectionResetError',10058:'BrokenPipeError',10060:'TimeoutError',10061:'ConnectionRefusedError'}
+_b_.OSError.tp_new=function(cls,args,kw){if(cls===_b_.OSError && args.length >=2 && args.length <=5){var errno=args[0]===true ? 1 :args[0]
+if(typeof errno=='number' && Object.hasOwn(errno_subclasses,errno)){cls=_b_[errno_subclasses[errno]]}}
+return _b_.BaseException.tp_new(cls,args,kw)}
 _b_.KeyError.tp_str=function(self){if(self.args.length==1){return _b_.repr(self.args[0])}
 return _b_.BaseException.tp_repr(self)}
 $B.set_func_names(_b_.KeyError,'builtins')
@@ -18042,14 +18061,16 @@ for(var value of this.values){if(value instanceof $B.ast.Constant){items.push(va
 throw Error('unexpected type inf temmplate')}}
 return js+`${items.join(', ')})\n`}
 function handler_to_js(handler,scopes,try_scope,err){if(! handler.name){return add_body(handler.body,scopes)+'\n'}
-bind(handler.name,scopes)
-var mangled=mangle(scopes,try_scope,handler.name)
-var js=prefix+`locals.${mangled} = ${err}\n`+prefix+'try {\n'
+var scope=bind(handler.name,scopes),locals_name=make_scope_name(scopes,scope),mangled=mangle(scopes,try_scope,handler.name),target=`${locals_name}.${mangled}`
+var js=prefix+`${target} = ${err}\n`+prefix+'try {\n'
 indent()
 js+=add_body(handler.body,scopes)+'\n'
 dedent()
+scope.locals.delete(mangled)
 return js+prefix+'} finally {\n'+
-prefix+tab+`delete locals.${mangled}\n`+prefix+'}\n'}
+prefix+tab+`${target} = _b_.None\n`+
+prefix+tab+`$B.$delete("${mangled}", ${locals_name})\n`+
+prefix+'}\n'}
 $B.ast.Try.prototype.to_js=function(scopes){compiler_check(this)
 var id=make_id(),has_except_handlers=this.handlers.length > 0,has_else=this.orelse.length > 0,has_finally=this.finalbody.length > 0
 var js=prefix+`$B.set_lineno(frame, ${this.lineno})\n`+
