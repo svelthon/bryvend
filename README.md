@@ -1,7 +1,7 @@
 # Bryvend
 
-Bryvend, the Brython that Bryntime and Bryc run on, with its fixes, until upstream
-Brython carries them.
+Bryvend, the Brython that Bryntime and Brycomp run on, with its fixes, until
+upstream Brython carries them.
 
 ```js
 import 'bryvend';          // the runtime, started
