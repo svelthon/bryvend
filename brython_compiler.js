@@ -203,7 +203,7 @@ $B.str_dict_set(symbols,name,v_free)}
 return 1}
 function analyze_block(ste,bound,free,global,typeparams,class_entry){var success=0
 let local=new Set()
-let scopes={}
+let scopes=Object.create(null)
 let newglobal=new Set()
 let newfree=new Set()
 let newbound=new Set()

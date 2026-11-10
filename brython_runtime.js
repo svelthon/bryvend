@@ -4103,9 +4103,9 @@ var nb_formal=positional_length+kwonly_length
 var parser=function(f,args){var def_obj
 if(defaults !==_b_.None){def_obj={}
 var start_defs=positional_length-defaults.length
-for(var i=start_defs;i < positional_length;i++){def_obj[arg_names[i]]=defaults[i-start_defs]}}
+for(var i=start_defs;i < positional_length;i++){$B.str_dict_set(def_obj,arg_names[i],defaults[i-start_defs])}}
 if(kwonly_defs !==_b_.None){def_obj=def_obj ??{}
-for(var key in kwonly_defs){def_obj[key]=kwonly_defs[key]}}
+for(var key in kwonly_defs){$B.str_dict_set(def_obj,key,kwonly_defs[key])}}
 var too_many_pos=0
 var posonly_as_keywords
 const locals=$B.empty_dict()
@@ -4117,9 +4117,9 @@ const last_arg=args[args_length-1]
 const has_kw=last_arg?.[$B.KW]
 const nb_pos=has_kw ? args_length-1 :args_length
 if(vararg !==null){locals[vararg]=vargs=$B.fast_tuple()}
-if(nb_pos <=positional_length){for(let iarg=0;iarg < nb_pos;iarg++){locals[arg_names[iarg]]=args[iarg]}
+if(nb_pos <=positional_length){for(let iarg=0;iarg < nb_pos;iarg++){$B.str_dict_set(locals,arg_names[iarg],args[iarg])}
 filled_pos=nb_pos}else{
-for(let iarg=0;iarg < positional_length;iarg++){locals[arg_names[iarg]]=args[iarg]}
+for(let iarg=0;iarg < positional_length;iarg++){$B.str_dict_set(locals,arg_names[iarg],args[iarg])}
 filled_pos=positional_length
 if(vararg !==null){for(let j=positional_length;j < nb_pos;j++){vargs.push(args[j])}}else{
 too_many_pos=nb_pos-positional_length}}
@@ -4145,7 +4145,7 @@ index <=positional_length-defaults.length){
 if(kwarg){$B.str_dict_set(locals[kwarg],param,value)}else{
 posonly_as_keywords=posonly_as_keywords ??[]
 posonly_as_keywords.push(param)}}}else{
-locals[param]=value
+$B.str_dict_set(locals,param,value)
 filled_pos++}}
 var elt=last_arg,
 seen=elt[$B.KW].length > 1 ? new Set():null
@@ -4169,7 +4169,7 @@ if(posonly_as_keywords){$B.RAISE(_b_.TypeError,`${name}() got some positional-on
 `arguments: '${posonly_as_keywords.join(', ')}'`)}
 if(nb_formal==0){
 return locals}
-if(filled_pos < nb_formal){for(let key in def_obj){if(! Object.hasOwn(locals,key)){locals[key]=def_obj[key]
+if(filled_pos < nb_formal){for(let key in def_obj){if(! Object.hasOwn(locals,key)){$B.str_dict_set(locals,key,def_obj[key])
 filled_pos++}}
 if(filled_pos < nb_formal){
 var missing_positional=[]
@@ -11733,7 +11733,10 @@ dict.$match_mapping_pattern=true
 $B.str_dict_contains=function(d,key){return Object.hasOwn(d,key)}
 $B.str_dict_get=function(d,key,_default){if(Object.hasOwn(d,key)){return d[key]}
 return _default===undefined ? $B.NULL :_default}
-$B.str_dict_set=function(d,attr,value){d[attr]=value}
+$B.str_dict_set=function(d,attr,value){if(attr==='__proto__' && ! Object.hasOwn(d,attr)){
+Object.defineProperty(d,attr,{value,writable:true,enumerable:true,configurable:true})
+return}
+d[attr]=value}
 $B.str_dict_del=function(d,attr){delete d[attr]}
 $B.str_dict_pop=function(d,attr){if(! Object.hasOwn(d,attr)){return $B.NULL}
 delete d[attr]}
@@ -11763,7 +11766,7 @@ if(d[VERSION]!==version){$B.RAISE(_b_.RuntimeError,'dictionary changed size duri
 var $copy_dict=function(left,right){
 right[VERSION]=right[VERSION]||0
 var right_version=right[VERSION]
-if(! right[KEYS]){if(! left[KEYS]){for(let key in right){left[key]=right[key]
+if(! right[KEYS]){if(! left[KEYS]){for(let key in right){$B.str_dict_set(left,key,right[key])
 if(left[$B.JSOBJ]){left[$B.JSOBJ][key]=right[key]}}}else{
 for(let key in right){dict.$setitem(left,key,right[key])}}}else{
 for(var entry of dict.$iter_items(right)){dict.$setitem(left,entry.key,entry.value,entry.hash)
@@ -11858,7 +11861,7 @@ if(self[TABLE]){delete self[TABLE][_b_.hash(key)]}}
 dict.$getitem=function(self,key,ignore_missing){
 if(Object.hasOwn(self,$B.JSOBJ)){if(Object.hasOwn(self[$B.JSOBJ],key)){return $B.jsobj2pyobj(self[$B.JSOBJ][key])}
 $B.RAISE(_b_.KeyError,key)}
-if(fast_string_key(key)){if(Object.hasOwn(self,key)){return self[key]}}else{
+if(typeof key=='string'){if(Object.hasOwn(self,key)){return self[key]}}else{
 if(! self[TABLE]){var hash_method=$B.$getattr($B.get_class(key),'__hash__')
 if(hash_method !==$B.str_dict_get($B.get_dict(_b_.object),'__hash__')){convert_all_str(self)
 let index=index_by_key(self,key)
@@ -11903,7 +11906,6 @@ for(var i=d[KEYS].length-1;i >=0;i--){var key=d[KEYS][i]
 if(key !==undefined){yield $B.fast_tuple([key,d[VALUES][i]])
 if(d[VERSION]!==version){$B.RAISE(_b_.RuntimeError,'dictionary changed size during iteration')}}}}
 if(d[VERSION]!==version){$B.RAISE(_b_.RuntimeError,'dictionary changed size during iteration')}}
-function fast_string_key(key){return typeof key=='string' && key !=='__proto__'}
 function convert_all_str(d){
 d[TABLE]=Object.create(null)
 d[KEYS]=[]
@@ -11916,13 +11918,13 @@ if(self[$B.JSOBJ]){
 value=$B.pyobj2jsobj(value)
 self[$B.JSOBJ][key]=value}
 var new_str_key
-if(fast_string_key(key)){
+if(typeof key=='string'){
 new_str_key=! Object.hasOwn(self,key)
-self[key]=value}
-if(! self[TABLE]){if(fast_string_key(key)){var int=parseInt(key)
+$B.str_dict_set(self,key,value)}
+if(! self[TABLE]){if(typeof key=='string'){var int=parseInt(key)
 if(isNaN(int)||int >=0){if(new_str_key){self[VERSION]=self[VERSION]?? 0
 self[VERSION]++}
-self[key]=value
+$B.str_dict_set(self,key,value)
 return _b_.None}else{
 convert_all_str(self)}}else{
 convert_all_str(self)}}
@@ -12085,7 +12087,7 @@ index--}}
 dict_funcs.setdefault=function(self){var $=$B.args("setdefault",3,{self:null,key:null,_default:null},arguments,{_default:_b_.None})
 var self=$.self,key=$.key,_default=$._default
 _default=_default===undefined ? _b_.None :_default
-if(! self[TABLE]){if(fast_string_key(key)){if(! Object.hasOwn(self,key)){self[key]=_default}
+if(! self[TABLE]){if(typeof key=='string'){if(! Object.hasOwn(self,key)){$B.str_dict_set(self,key,_default)}
 return self[key]}else{
 convert_all_str(self)}}
 var lookup=dict.$lookup_by_key(self,key)
@@ -16483,6 +16485,9 @@ return '_'+scope_name+name}
 ix--}}
 return name}
 function reference(scopes,scope,name){return make_scope_name(scopes,scope)+'.'+mangle(scopes,scope,name)}
+function name_store(namespace,name){return name=='__proto__' ? `$B.own_proto(${namespace}).__proto__` :
+`${namespace}.${name}`}
+function literal_key(name){return name=='__proto__' ? '["__proto__"]' :name}
 function get_binding_scope(name,scopes){var scope=$B.last(scopes),up_scope=last_scope(scopes)
 name=mangle(scopes,up_scope,name)
 if(up_scope.globals && up_scope.globals.has(name)){scope=scopes[0]}else if(up_scope.nonlocals.has(name)){for(var i=scopes.indexOf(up_scope)-1;i >=0;i--){if(scopes[i].parent){
@@ -16575,6 +16580,11 @@ if(scopes[i].has_import_star){return{found:false,resolve:'all'}}}
 if(builtins_scope.locals.has(name)){return{found:builtins_scope}}
 var scope_names=make_search_namespaces(scopes)
 return{found:false,resolve:scope_names}}
+$B.own_proto=function(ns){
+var holder=ns
+while(holder !==null && ! Object.hasOwn(holder,'__proto__')){holder=Object.getPrototypeOf(holder)}
+if(holder===Object.prototype){Object.defineProperty(ns,'__proto__',{value:undefined,writable:true,enumerable:true,configurable:true})}
+return ns}
 function resolve_in_namespace(name,ns){if(ns.$proxy ||ns[$B.LOCALS_PROXY]){
 return ns[name]===undefined ?{found:false}:
 {found:true,value:ns[name]}}
@@ -16848,14 +16858,16 @@ delete scopes.eval_annotation}}
 if(this.value){js+=prefix+`var ann = ${$B.js_from_ast(this.value, scopes)}\n`
 if(this.target instanceof $B.ast.Name && this.simple){let scope=bind(this.target.id,scopes),mangled=mangle(scopes,scope,this.target.id)
 if(scope.type !="def"){
-if(! scopes.postpone_annotations){if(scope.type=='class'){scope.annotate.push(`${mangled}: [${this.lineno}, `+
+if(! scopes.postpone_annotations){if(scope.type=='class'){scope.annotate.push(`${literal_key(mangled)}: [${this.lineno}, `+
 `() => ${ann_value}]`)}else{
 js+=prefix+
-`locals.$annotations.${mangled} = `+
+`${name_store('locals.$annotations', mangled)} = `+
 `[${this.lineno}, () => ${ann_value}]\n`}}else{
 js+=prefix+`$B.$setitem(locals.__annotations__, `+
 `'${mangled}', ${ann_value}, ${inum})\n`}}
-let target_ref=name_reference(this.target.id,scopes)
+let target_ref=mangled=='__proto__' ?
+name_store(make_scope_name(scopes,scope),mangled):
+name_reference(this.target.id,scopes)
 js+=prefix+`${target_ref} = ann`}else if(this.target instanceof $B.ast.Attribute){js+=prefix+`$B.$setattr(${$B.js_from_ast(this.target.value, scopes)}`+
 `, "${this.target.attr}", ann)`}else if(this.target instanceof $B.ast.Subscript){js+=prefix+`$B.$setitem(${$B.js_from_ast(this.target.value, scopes)}`+
 `, ${$B.js_from_ast(this.target.slice, scopes)}, ann)`}}else{
@@ -16997,10 +17009,11 @@ if(this.target instanceof $B.ast.Name){var scope=name_scope(this.target.id,scope
 if(! scope.found){
 let left_scope=scope.resolve=='global' ?
 make_globals_name(scopes):'locals'
-js=prefix+`${left_scope}.${this.target.id} = $B.augm_assign(`+
+js=prefix+`${name_store(left_scope, this.target.id)} = $B.augm_assign(`+
 make_ref(this.target.id,scopes,scope,this.target)+`, '${iop}', ${value})`}else{
-let ref=`${make_scope_name(scopes, scope.found)}.${this.target.id}`
-js=prefix+`${ref} = $B.augm_assign(${ref}, '${iop}', ${value})`}}else if(this.target instanceof $B.ast.Subscript){js=prefix+`$B.$setitem((locals.$tg = ${this.target.value.to_js(scopes)}), `+
+let namespace=make_scope_name(scopes,scope.found)
+js=prefix+`${name_store(namespace, this.target.id)} = `+
+`$B.augm_assign(${namespace}.${this.target.id}, '${iop}', ${value})`}}else if(this.target instanceof $B.ast.Subscript){js=prefix+`$B.$setitem((locals.$tg = ${this.target.value.to_js(scopes)}), `+
 `(locals.$key = ${this.target.slice.to_js(scopes)}), `+
 `$B.augm_assign($B.$getitem(locals.$tg, locals.$key), '${iop}', ${value}))`}else if(this.target instanceof $B.ast.Attribute){let mangled=mangle(scopes,last_scope(scopes),this.target.attr)
 js=prefix+`$B.$setattr((locals.$tg = ${this.target.value.to_js(scopes)}), `+
@@ -17078,7 +17091,7 @@ var value=$B.js_from_ast(keyword.value,scopes)
 if(starred_kwargs.length > 0){
 starred_kwargs.push(
 `_b_.dict.$literal([['${keyword.arg}', ${value}]])`)}else{
-named_kwargs.push(`${keyword.arg}: ${value}`)}}else{
+named_kwargs.push(`${literal_key(keyword.arg)}: ${value}`)}}else{
 starred_kwargs.push($B.js_from_ast(keyword.value,scopes))}}
 var args_list=[]
 for(let arg of this.args){if(arg instanceof $B.ast.Starred){var starred_arg=$B.js_from_ast(arg.value,scopes)
@@ -17488,7 +17501,7 @@ defaults==='_b_.None' &&
 kw_defaults==='_b_.None'){js+=prefix+`if(arguments.length == ${positional.length} && `+
 `! _${positional[positional.length -1].arg}?.[$B.KW]){\n`+
 prefix+tab+`var ${locals_name} = locals = `+
-`{${positional.map(x => x.arg + ': _' + x.arg).join(', ')}}\n`+
+`{${positional.map(x => literal_key(x.arg) + ': _' + x.arg).join(', ')}}\n`+
 prefix+`} else {\n`+
 prefix+tab+`var ${locals_name} = locals = `+
 `$B.args_parser(${name2}, arguments)\n`+
@@ -17989,7 +18002,7 @@ var scope=bind(this.id,scopes)
 if(scope===$B.last(scopes)&& scope.freevars.has(this.id)){
 scope.freevars.delete(this.id)}
 var scope_name=make_scope_name(scopes,scope)
-return scope_name+'.'+mangle(scopes,scope,this.id)}else if(this.ctx instanceof $B.ast.Load){
+return name_store(scope_name,mangle(scopes,scope,this.id))}else if(this.ctx instanceof $B.ast.Load){
 if(this.id=='__debug__'){return '_b_.__debug__'}
 var scope=name_scope(this.id,scopes)
 if(this.id=='xzs'){console.log('Name.to_js, scope',scope)}
