@@ -6755,6 +6755,12 @@ ExceptionGroup_funcs.__weakref___set=function(self){}
 _b_.ExceptionGroup.tp_getset=["__weakref__"]
 $B.set_func_names(_b_.ExceptionGroup,"builtins")
 _b_.JavascriptError=$B.make_builtin_class('JavascriptError',[_b_.Exception])
+_b_.JavascriptError.tp_getattro=function(self,attr){var res=_b_.object.tp_getattro(self,attr)
+if(res !==$B.NULL){return res}
+var js=Object.hasOwn(self,'$js_exc')? self.$js_exc :self
+if(js !==null &&(typeof js=='object' ||typeof js=='function')&&
+attr in js){return $B.jsobj2pyobj(js[attr])}
+return $B.NULL}
 function make_report(lines,positions){
 var[lineno,end_lineno,col_offset,end_col_offset]=positions
 lines=lines.slice(lineno-1,end_lineno)
@@ -15127,7 +15133,7 @@ update(browser,{"alert":function(message){window.alert($B.builtins.str.$factory(
 DOMEvent:$B.DOMEvent,DOMNode:$B.DOMNode,load:function(script_url){
 var file_obj=$B.builtins.open(script_url)
 var content=$B.$getattr(file_obj,'read')()
-eval(content)},load1:function(script_url,callback){
+globalThis.eval(content)},load1:function(script_url,callback){
 var script=document.createElement('SCRIPT')
 script.src=script_url
 if(callback){script.addEventListener('load',function(){callback()})}
@@ -15305,7 +15311,7 @@ return $B.$call(callback,...loaded)}},JSObject:$B.JSObj,JSON:{ob_type:$B.make_bu
 'Use browser.load instead.')
 var file_obj=$B.builtins.open(script_url)
 var content=$B.$getattr(file_obj,'read')()
-eval(content)},Math:self.Math && $B.jsobj2pyobj(self.Math),NULL:null,NullType,Number:self.Number && $B.jsobj2pyobj(self.Number),py2js:function(src,module_name){if(module_name===undefined){module_name='__main__'+$B.UUID()}
+globalThis.eval(content)},Math:self.Math && $B.jsobj2pyobj(self.Math),NULL:null,NullType,Number:self.Number && $B.jsobj2pyobj(self.Number),py2js:function(src,module_name){if(module_name===undefined){module_name='__main__'+$B.UUID()}
 var js=$B.py2js({src,filename:'<string>'},module_name,module_name,$B.builtins_scope).to_js()
 return $B.format_indent(js,0)},pyobj2jsobj:function(obj){return $B.pyobj2jsobj(obj)},RegExp:self.RegExp && $B.jsobj2pyobj(self.RegExp),String:self.String && $B.jsobj2pyobj(self.String),"super":super_class,
 UNDEFINED:_b_.None,UndefinedType:$B.UndefinedType}
