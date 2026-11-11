@@ -13,8 +13,7 @@ if (!(globalThis.__BRYTHON__ && globalThis.__BRYTHON__.builtins)) {
 // github.com/brython-dev/brython
 "use strict";
 var __BRYTHON__=globalThis.__BRYTHON__ ||{}
-try{
-eval("async function* f(){}")}catch(err){console.warn("Your browser is not fully supported. If you are using "+
+if(typeof Symbol.asyncIterator !=="symbol"){console.warn("Your browser is not fully supported. If you are using "+
 "Microsoft Edge, please upgrade to the latest version")}
 if(! Object.hasOwn(RegExp,'escape')){RegExp.escape=function(str){return str.replace(/[/\-\\^$*+?.()|[\]{}]/g,'\\$&')}}
 if(! Object.hasOwn(Set.prototype,'difference')){Set.prototype.difference=function(self,other){var res=new Set()
@@ -6141,11 +6140,13 @@ $B.$AlphabeticalCompare=alphabeticalCompare})(__BRYTHON__);
 "use strict";
 (function($B){var _b_=$B.builtins
 $B.del_exc=function(frame){delete frame.$current_exception}
-$B.set_exc=function(exc,frame){exc.__traceback__=exc.__traceback__===_b_.None ? make_tb():exc.__traceback__
-if(exc.ob_type===undefined){}
+function unmarkable(exc){return exc===null ||
+(typeof exc !=='object' && typeof exc !=='function')||
+! Object.isExtensible(exc)}
+$B.set_exc=function(exc,frame){if(! unmarkable(exc)){exc.__traceback__=exc.__traceback__===_b_.None ? make_tb():exc.__traceback__
 exc.ob_type=exc.ob_type ?? _b_.JavascriptError
 exc.suppress_context=exc.suppress_context ?? false
-exc.args=exc.args ??[exc.message]
+exc.args=exc.args ??[exc.message]}
 if(frame===undefined){var msg='Internal error: no frame for exception '+_b_.repr(exc)
 console.error(['Traceback (most recent call last):',$B.print_stack(exc.$frame_obj),msg].join('\n'))
 if($B.get_option('debug',exc)> 1){console.log(exc.args)
@@ -6153,7 +6154,7 @@ console.log(exc.stack)}
 throw Error(msg)}else{
 frame.$current_exception=$B.exception(exc)}}
 $B.set_exc_and_trace=function(frame,exc){$B.set_exc(exc,frame)
-if((! exc.$in_trace_func)&& frame.$f_trace !==_b_.None){frame.$f_trace=$B.trace_exception()}}
+if((! exc?.$in_trace_func)&& frame.$f_trace !==_b_.None){frame.$f_trace=$B.trace_exception()}}
 $B.set_exc_and_leave=function(frame,exc){$B.set_exc_and_trace(frame,exc)
 $B.leave_frame()
 throw exc}
@@ -6303,6 +6304,17 @@ stack.reverse()
 return stack}
 $B.exception=function(js_exc){
 var exc
+if(unmarkable(js_exc)){var msg=typeof js_exc=='object' && js_exc !==null ?
+js_exc.name+': '+js_exc.message :String(js_exc)
+exc=$B.EXC(_b_.JavascriptError,msg)
+exc.$js_exc=js_exc
+exc.__cause__=_b_.None
+exc.__context__=_b_.None
+exc.suppress_context=false
+exc.__traceback__=traceback.$factory(exc)
+exc.args=_b_.tuple.$factory([msg])
+exc.$py_error=true
+return exc}
 var klass=$B.get_class(js_exc)
 if(klass===$B.JSObject){if(js_exc.$py_exc){
 return js_exc.$py_exc}
@@ -6325,7 +6337,7 @@ exc=js_exc}
 exc.__traceback__=exc.__traceback__ ?? traceback.$factory(exc)
 return exc}
 $B.is_exc=function(exc,exc_list){
-if($B.get_class(exc)===undefined){exc=$B.exception(exc)}
+if(unmarkable(exc)||$B.get_class(exc)===undefined){exc=$B.exception(exc)}
 if(! Array.isArray(exc_list)){exc_list=[exc_list]}
 var this_exc_class=$B.is_type(exc)? exc :$B.get_class(exc)
 for(var i=0;i < exc_list.length;i++){var exc_class=exc_list[i]
@@ -18075,7 +18087,7 @@ throw Error('unexpected type inf temmplate')}}
 return js+`${items.join(', ')})\n`}
 function handler_to_js(handler,scopes,try_scope,err){if(! handler.name){return add_body(handler.body,scopes)+'\n'}
 var scope=bind(handler.name,scopes),locals_name=make_scope_name(scopes,scope),mangled=mangle(scopes,try_scope,handler.name),target=`${locals_name}.${mangled}`
-var js=prefix+`${target} = ${err}\n`+prefix+'try {\n'
+var js=prefix+`${target} = frame.$current_exception\n`+prefix+'try {\n'
 indent()
 js+=add_body(handler.body,scopes)+'\n'
 dedent()
