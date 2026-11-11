@@ -15978,16 +15978,16 @@ var ast=$B.ast={}
 let base_class={}
 for(let[name,value]of Object.entries($B.ast_classes)){if(Array.isArray(value)){for(let subclass of value){base_class[subclass]=name}}}
 for(let name in $B.ast_classes){if(! Object.hasOwn(base_class,name)){base_class[name]='AST'}}
-for(var kl in $B.ast_classes){var args=$B.ast_classes[kl],body='',arg_list=[],fields=[],optional=[]
+function ast_class(arg_list,listed){return function(...values){for(var i=0,len=arg_list.length;i < len;i++){var value=values[i]
+this[arg_list[i]]=listed[i]?
+$B.$list(value===undefined ?[]:value):value}}}
+for(var kl in $B.ast_classes){var args=$B.ast_classes[kl],arg_list=[],listed=[],fields=[],optional=[]
 if(typeof args=="string"){if(args.length > 0){for(var arg of args.split(',')){let[arg_type,arg_name]=arg.split(/\s+/)
 arg_list.push(arg_name)
-if(arg_type.endsWith('*')){
-body+=` this.${arg_name} = $B.$list(${arg_name} === undefined ? [] : ${arg_name})\n`}else if(arg_type.endsWith('?')){
-optional.push(arg_name)
-body+=` this.${arg_name} = ${arg_name}\n`}else{
-body+=` this.${arg_name} = ${arg_name}\n`}}
+listed.push(arg_type.endsWith('*'))
+if(arg_type.endsWith('?')){optional.push(arg_name)}}
 fields=args.split(',').map(x=> x.trim().split(/\s+/)[1])}
-ast[kl]=Function(...arg_list,body)
+ast[kl]=ast_class(arg_list,listed)
 ast[kl]._fields=fields
 ast[kl]._optional=optional}else{
 ast[kl]=args.map(x=> ast[x])
