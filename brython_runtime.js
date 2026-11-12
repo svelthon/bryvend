@@ -133,16 +133,18 @@ if(mro[0]!==cls){console.log('bizarre',cls,mro)}
 return mro}
 $B.is_type=function(obj){var klass=$B.get_class(obj)
 return klass.tp_mro.includes(_b_.type)}
-$B.is_bytes=function(obj){return obj?.ob_type?.tp_flags & $B.TPFLAGS.BYTES_SUBCLASS}
-$B.is_dict=function(obj){return obj && obj[$B.OB_TYPE]?.tp_flags & $B.TPFLAGS.DICT_SUBCLASS}
+function flags_of(type){var flags=type?.tp_flags
+return typeof flags=='number' ? flags :0}
+$B.is_bytes=function(obj){return flags_of(obj?.ob_type)& $B.TPFLAGS.BYTES_SUBCLASS}
+$B.is_dict=function(obj){return obj && flags_of(obj[$B.OB_TYPE])& $B.TPFLAGS.DICT_SUBCLASS}
 $B.is_int=function(obj){return typeof obj=='number' ||
 typeof obj=='bigint' ||
 typeof obj=='boolean' ||
-obj?.ob_type?.tp_flags & $B.TPFLAGS.LONG_SUBCLASS}
-$B.is_list=function(obj){return obj?.ob_type?.tp_flags & $B.TPFLAGS.LIST_SUBCLASS}
+flags_of(obj?.ob_type)& $B.TPFLAGS.LONG_SUBCLASS}
+$B.is_list=function(obj){return flags_of(obj?.ob_type)& $B.TPFLAGS.LIST_SUBCLASS}
 $B.is_str=function(obj){return typeof obj=='string' ||
-obj?.ob_type?.tp_flags & $B.TPFLAGS.UNICODE_SUBCLASS}
-$B.is_tuple=function(obj){return obj?.ob_type?.tp_flags & $B.TPFLAGS.TUPLE_SUBCLASS}
+flags_of(obj?.ob_type)& $B.TPFLAGS.UNICODE_SUBCLASS}
+$B.is_tuple=function(obj){return flags_of(obj?.ob_type)& $B.TPFLAGS.TUPLE_SUBCLASS}
 $B.is_builtin_type=function(cls){return !(cls.tp_flags & $B.TPFLAGS.HEAPTYPE)}
 $B.is_big_int=function(obj){return typeof $B.int_value(obj)==='bigint'}
 $B.is_sequence=function(obj){var type=$B.get_class(obj)
@@ -2112,7 +2114,7 @@ prev:$B.frame_obj,frame,count:count+1}}
 var reversed_op={"__lt__":"__gt__","__le__":"__ge__","__gt__":"__lt__","__ge__":"__le__"}
 var method2comp={"__lt__":"<","__le__":"<=","__gt__":">","__ge__":">="}
 $B.rich_comp=function(op,x,y){
-var x1=x?.valueOf ? x.valueOf():x,y1=y?.valueOf ? y.valueOf():y
+var x1=typeof x?.valueOf=='function' ? x.valueOf():x,y1=typeof y?.valueOf=='function' ? y.valueOf():y
 if((typeof x1=="number" ||typeof x1=="bigint")&&
 (typeof y1=="number" ||typeof y1=="bigint")){switch(op){case "__eq__":
 return x1==y1
@@ -2132,7 +2134,8 @@ $B.RAISE(_b_.TypeError,"'"+method2comp[op]+
 "' not supported between instances of '"+$B.class_name(x)+
 "' and '"+$B.class_name(y)+"'")}}
 var rev_op=reversed_op[op]||op,y_rev_func
-if(x?.ob_type && y?.ob_type){
+if(typeof x?.ob_type?.tp_name=="string" &&
+typeof y?.ob_type?.tp_name=="string"){
 if($B.get_mro(y.ob_type).indexOf(x.ob_type)>-1){y_rev_func=$B.$getattr($B.get_class(y),rev_op)
 res=$B.$call(y_rev_func,y,x)
 if(res !==_b_.NotImplemented){return res}}}
@@ -5101,7 +5104,9 @@ return true}catch(err){if($B.is_exc(err,[_b_.AttributeError])){return false}
 throw err}}
 _b_.hash=function(obj){check_nb_args_no_kw('hash',1,arguments)
 return $B.$hash(obj)}
-$B.$hash=function(obj){if(obj?.__hashvalue__ !==undefined){return obj.__hashvalue__}
+$B.$hash=function(obj){
+var hashvalue=obj?.__hashvalue__
+if(typeof hashvalue=='number' ||typeof hashvalue=='bigint'){return hashvalue}
 var res
 if(typeof obj==="boolean"){return obj ? 1 :0}else if(typeof obj==="number"){res=obj}else{
 var klass=$B.get_class(obj)
@@ -13079,8 +13084,13 @@ var res=JSObj_eq(self,other)
 return res===_b_.NotImplemented ? res :! res
 default:
 return _b_.NotImplemented}}
+const JS_HASHES=new WeakMap()
 $B.JSObj.tp_hash=function(self){
-return _b_.object.tp_hash(self)}
+if(self===null ||(typeof self !='object' && typeof self !='function')){return _b_.object.tp_hash(self)}
+var hash=JS_HASHES.get(self)
+if(hash===undefined){hash=$B.$py_next_hash--
+JS_HASHES.set(self,hash)}
+return hash}
 $B.JSObj.tp_iter=function(self){return{
 ob_type:js_iterator,obj:self,it:Object.keys(self)[Symbol.iterator](),length:Object.keys(self).length}}
 function is_plain(obj){if(obj===null ||typeof obj !='object'){return false}
@@ -13103,7 +13113,7 @@ var res=_b_.object.tp_getattro(_self,attr,$B.NULL)
 if(test){console.log(res)}
 if(res !==$B.NULL){return res}
 var js_attr=_self[attr]
-if(js_attr==undefined && typeof _self=="function"){js_attr=_self.$js_func[attr]}
+if(js_attr==undefined && typeof _self=="function"){js_attr=_self.$js_func?.[attr]}
 if(test){console.log('js_attr',js_attr,typeof js_attr,'\n is JS class ?',js_attr===undefined ? false :
 js_attr.toString().startsWith('class '))}
 if(js_attr===undefined){if(typeof _self=='object' && attr in _self){
@@ -13125,7 +13135,6 @@ js_attr.toString &&
 typeof js_attr=='function' &&
 Function.prototype.toString.call(js_attr).startsWith('class ')){
 return jsclass2pyclass(js_attr)}else if(typeof js_attr==='function'){
-if(! js_attr.$infos && ! js_attr.$function_infos){js_attr.$js_func=js_attr}
 return jsobj2pyobj(js_attr,_self.$js_func ||_self)}else{
 if(test){console.log('jsobj2pyobj on',js_attr)}
 var res=jsobj2pyobj(js_attr)
@@ -13152,8 +13161,8 @@ return res}
 $B.RAISE(_b_.KeyError,key)}
 $B.JSObj.mp_ass_subscript=function(){return $B.JSObj.tp_setattro.apply(null,arguments)}
 $B.JSObj.tp_repr=function(self){if(typeof self=='number'){return self+''}
-if(typeof self=='function' && self.$js_func.name &&
-globalThis[self.$js_func.name]===self.$js_func){return `<function window.${self.$js_func.name}>`}
+var func=typeof self=='function' ? self.$js_func ?? self :undefined
+if(func && func.name && globalThis[func.name]===func){return `<function window.${func.name}>`}
 var js_repr=Object.prototype.toString.call(self)
 return `<Javascript object: ${js_repr}>`}
 var JSObj_funcs=$B.JSObj.tp_funcs={}
@@ -13162,7 +13171,7 @@ attrs=attrs.sort()
 return attrs}
 JSObj_funcs.__getattr__=function(self,attr){var test=false 
 var js_attr=self[attr]
-if(js_attr==undefined && typeof self=="function"){js_attr=self.$js_func[attr]}
+if(js_attr==undefined && typeof self=="function"){js_attr=self.$js_func?.[attr]}
 if(test){console.log('js_attr',js_attr,typeof js_attr,'\n is JS class ?',js_attr===undefined ? false :
 js_attr.toString().startsWith('class '))}
 if(js_attr===undefined){if(typeof self=='object' && attr in self){
@@ -13174,7 +13183,6 @@ js_attr.toString &&
 typeof js_attr=='function' &&
 Function.prototype.toString.call(js_attr).startsWith('class ')){
 return jsclass2pyclass(js_attr)}else if(typeof js_attr==='function'){
-if(! js_attr.$infos && ! js_attr.$function_infos){js_attr.$js_func=js_attr}
 return jsobj2pyobj(js_attr,self.$js_func ||self)}else{
 if(test){console.log('jsobj2pyobj on',js_attr)}
 if(js_attr===undefined && ! Object.hasOwn(attr)){return $B.NULL}
@@ -13415,7 +13423,14 @@ $B.JSFunction.tp_getattro=function(self,attr){if(attr==='__name__' ||attr==='__q
 var jsf=self[JSOBJ]||self
 if(jsf && typeof jsf.name==='string' && jsf.name){return jsf.name}}
 if(self[JSOBJ]&& self[JSOBJ][attr]!==undefined){return jsobj2pyobj(self[JSOBJ][attr],self[JSOBJ])}
+if(self[JSOBJ]&& attr in self[JSOBJ]){
+return _b_.None}
 return _b_.object.tp_getattro(self,attr)}
+$B.JSFunction.tp_setattro=function(self,attr,value){
+var func=self[JSOBJ]||self
+if(value===$B.NULL){delete func[attr]}else{
+func[attr]=$B.pyobj2jsobj(value)}
+return _b_.None}
 $B.JSFunction.tp_descr_get=function(self,obj){if(obj===$B.NULL){return self}
 return $B.$call($B.method,self,obj)}
 $B.JSFunction.tp_call=function(self,...args){return self(...args)}
