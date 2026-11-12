@@ -12877,8 +12877,7 @@ const known=made?.get(jsobj)
 if(known !==undefined){return known}
 var res=function(){var args=new Array(arguments.length),memo=new Map()
 for(var i=0,len=arguments.length;i < len;++i){var arg=arguments[i]
-if(arg !==null && arg.constructor===Object && arg[$B.KW]){console.log(Error().stack)
-$B.RAISE(_b_.TypeError,'keyword arguments are not supported for '+
+if(arg !==null && arg.constructor===Object && arg[$B.KW]){$B.RAISE(_b_.TypeError,'keyword arguments are not supported for '+
 'Javascript functions')}
 args[i]=pyobj2jsobj(arg,memo)}
 try{
@@ -13597,8 +13596,14 @@ if(gen.ag_running===true){$B.RAISE(_b_.ValueError,"generator already executing")
 gen.ag_running=true
 try{
 var res=await step(self,gen.next.bind(gen),value)}catch(err){gen.$finished=true
+if($B.is_exc(err,[_b_.StopAsyncIteration,_b_.StopIteration])){
+var exc=$B.EXC(_b_.RuntimeError,`async generator raised ${$B.class_name(err)}`)
+exc.__cause__=err
+throw exc}
 throw err}
-if(res.done){$B.RAISE(_b_.StopAsyncIteration,value)}
+if(res.done){
+gen.$finished=true
+$B.RAISE(_b_.StopAsyncIteration,value)}
 if($B.exact_type(res.value,$GeneratorReturn)){gen.$finished=true
 $B.RAISE(_b_.StopAsyncIteration,res.value.value)}
 gen.ag_running=false
