@@ -13003,12 +13003,21 @@ $B.JSClass.tp_getattro=function(self,attr){if(attr=='new'){return function(){var
 return jsobj2pyobj(new self.js_class(...args))}}
 var res=_b_.type.tp_getattro(self,attr)
 if(res !==$B.NULL){return res}
-if(! self.js_class.hasOwnProperty(attr)){return $B.NULL}
-return jsobj2pyobj(self.jsobj[attr],self.jsobj)}
+if(self.js_class[attr]===undefined){return $B.NULL}
+return jsobj2pyobj(self.js_class[attr],self.js_class)}
+$B.JSClass.tp_setattro=function(self,attr,value){
+if(JS_CLASSES.get(self.js_class)!==self ||
+$B.search_in_mro(self,attr,$B.NULL)!==$B.NULL){return _b_.type.tp_setattro(self,attr,value)}
+if(value===$B.NULL){delete self.js_class[attr]}else{
+self.js_class[attr]=pyobj2jsobj(value)}
+return _b_.None}
 $B.JSClass.tp_new=function(cls,args,kw){var kls=_b_.type.tp_new(cls,args,kw)
 kls.js_class=kls.tp_bases[0].js_class
 return kls}
+const JS_CLASSES=new WeakMap()
 function jsclass2pyclass(js_class){
+var known=JS_CLASSES.get(js_class)
+if(known !==undefined){return known}
 var cls={ob_type:$B.JSClass,tp_bases:[],tp_name:js_class.name,tp_flags:$B.TPFLAGS.HEAPTYPE |$B.TPFLAGS.BASETYPE,js_class}
 $B.init_dict(cls)
 cls.tp_mro=$B.make_mro(cls)
@@ -13020,11 +13029,14 @@ $B.set_to_dict(cls,'__init__',function(self,...args){self.jsobj=new cls.js_class
 )
 $B.set_to_dict(cls,'__getattr__',function(self,attr){return jsobj2pyobj(self.jsobj[attr],self.jsobj)}
 )
+$B.make_getattr(cls)
 $B.set_to_dict(cls,'__setattr__',function(self,attr,value){self.jsobj[attr]=pyobj2jsobj(value)}
 )
 $B.make_new(cls)
 $B.make_init(cls)
 $B.make_setattr(cls)
+cls[JSOBJ]=js_class
+JS_CLASSES.set(js_class,cls)
 return cls}
 var js_iterator=$B.make_builtin_class('js_iterator')
 js_iterator.tp_iternext=function*(self){for(var key of self.it){yield key}}
