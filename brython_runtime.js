@@ -13190,6 +13190,17 @@ $B.IterableJSObj.tp_iternext=function*(self){if(self.it===undefined){
 self.it=self[Symbol.iterator]()}
 for(var value of self.it){yield jsobj2pyobj(value)}}
 $B.set_func_names($B.IterableJSObj,'builtins')
+$B.AsyncIterableJSObj=$B.make_builtin_class('AsyncIterableJavascriptObject',[$B.JSObj])
+var js_async_iterators=new WeakMap()
+$B.AsyncIterableJSObj.am_aiter=function(self){js_async_iterators.set(self,self[Symbol.asyncIterator]())
+return self}
+$B.AsyncIterableJSObj.am_anext=function(self){var iterator=js_async_iterators.get(self)
+if(iterator===undefined){
+iterator=self[Symbol.asyncIterator]()
+js_async_iterators.set(self,iterator)}
+return iterator.next().then(function(step){if(step.done){$B.RAISE(_b_.StopAsyncIteration)}
+return jsobj2pyobj(step.value)})}
+$B.set_func_names($B.AsyncIterableJSObj,'builtins')
 var js_array_iterator=$B.make_builtin_class('JSArray_iterator')
 js_array_iterator.$factory=function(obj){return{
 ob_type:js_array_iterator,it:obj[Symbol.iterator]()}}
@@ -13304,8 +13315,10 @@ js_array.tp_methods=["append","extend","count","index","insert","remove","copy",
 $B.set_func_names(js_array,'javascript')
 $B.get_jsobj_class=function(obj){if(typeof obj=='function'){return $B.JSObj}
 var proto=Object.getPrototypeOf(obj)
-if(proto===null){return $B.JSObj}
-if(proto[Symbol.iterator]!==undefined){return $B.IterableJSObj}else if(Object.getOwnPropertyNames(proto).indexOf('length')>-1){return $B.SizedJSObj}
+if(proto===null){
+return typeof obj[Symbol.asyncIterator]=='function' ?
+$B.AsyncIterableJSObj :$B.JSObj}
+if(proto[Symbol.iterator]!==undefined){return $B.IterableJSObj}else if(typeof obj[Symbol.asyncIterator]=='function'){return $B.AsyncIterableJSObj}else if(Object.getOwnPropertyNames(proto).indexOf('length')>-1){return $B.SizedJSObj}
 return $B.JSObj}
 $B.JSMeta=$B.make_builtin_class("JSMeta",[_b_.type])
 $B.JSMeta.tp_call=function(cls){
