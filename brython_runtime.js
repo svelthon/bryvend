@@ -6143,7 +6143,10 @@ $B.$AlphabeticalCompare=alphabeticalCompare})(__BRYTHON__);
 $B.del_exc=function(frame){delete frame.$current_exception}
 function foreign(exc){return exc===null ||
 (typeof exc !=='object' && typeof exc !=='function')||
-exc.ob_type===undefined}
+(exc.ob_type===undefined && exc[$B.OB_TYPE]===undefined)}
+function cause_of(cause){if(cause===undefined){return _b_.None}
+return cause !==null && typeof cause=='object' && foreign(cause)?
+$B.exception(cause):cause}
 var python_exceptions=new WeakMap()
 $B.known_exception=function(js_exc){return python_exceptions.get(js_exc)}
 function thrown(exc){var js_exc=exc.$js_exc
@@ -6177,15 +6180,26 @@ if($B.$isinstance(arg,_b_.BaseException)){if($B.is_exc(arg,_b_.StopIteration)&&
 $B.frame_obj.frame.$is_generator){
 arg=$B.EXC(_b_.RuntimeError,"generator raised StopIteration")}
 arg.__context__=active_exc===undefined ? _b_.None :active_exc
-arg.__cause__=cause ||_b_.None
+arg.__cause__=cause_of(cause)
 arg.suppress_context=cause !==undefined
 throw thrown(arg)}else if($B.is_type(arg)&& _b_.issubclass(arg,_b_.BaseException)){if(arg===_b_.StopIteration){if($B.frame_obj.frame[1].$is_generator){
 $B.RAISE(_b_.RuntimeError,"generator raised StopIteration")}}
 var exc=$B.$call(arg)
 exc.__context__=active_exc===undefined ? _b_.None :active_exc
-exc.__cause__=cause ||_b_.None
+exc.__cause__=cause_of(cause)
 exc.suppress_context=cause !==undefined
-throw exc}else{
+throw exc}else if(arg !==null &&(typeof arg=='object' ||
+typeof arg=='function')&& foreign(arg)){if(typeof arg=='function'){
+var js_class=arg.$js_func ?? arg
+if(js_class !==Error && !(js_class.prototype instanceof Error)){$B.RAISE(_b_.TypeError,"exceptions must derive from BaseException")}
+arg=new js_class()}else if(! python_exceptions.has(arg)&& !(arg instanceof Error)&&
+Object.prototype.toString.call(arg)!='[object Error]'){
+$B.RAISE(_b_.TypeError,"exceptions must derive from BaseException")}
+var held=$B.exception(arg)
+held.__context__=active_exc===undefined ? _b_.None :active_exc
+held.__cause__=cause_of(cause)
+held.suppress_context=cause !==undefined
+throw thrown(held)}else{
 $B.RAISE(_b_.TypeError,"exceptions must derive from BaseException")}}}
 $B.print_stack=function(frame_obj){
 var stack=make_frames_stack(frame_obj ||$B.frame_obj)
@@ -6311,7 +6325,10 @@ $B.exception=function(js_exc){
 var exc
 if(foreign(js_exc)){
 var known=python_exceptions.get(js_exc)
-if(known !==undefined){return known}
+if(known !==undefined){
+if(known.ob_type===_b_.JavascriptError &&
+typeof js_exc.message=='string'){known.args=_b_.tuple.$factory([js_exc.message])}
+return known}
 var error_like=js_exc !==null && typeof js_exc=='object' &&
 typeof js_exc.message=='string',msg=error_like ? js_exc.message :foreign_text(js_exc)
 if(error_like && $B.is_recursion_error(js_exc)){msg="maximum recursion depth exceeded"
@@ -6759,6 +6776,13 @@ var js=Object.hasOwn(self,'$js_exc')? self.$js_exc :self
 if(js !==null &&(typeof js=='object' ||typeof js=='function')&&
 attr in js){return $B.jsobj2pyobj(js[attr],js)}
 return $B.NULL}
+_b_.JavascriptError.tp_setattro=function(self,attr,value){var js=self.$js_exc
+if(js !==null &&(typeof js=='object' ||typeof js=='function')&&
+!(attr.startsWith('__')&& attr.endsWith('__'))&&
+$B.search_in_mro($B.get_class(self),attr,$B.NULL)===$B.NULL){if(value===$B.NULL){delete js[attr]}else{
+js[attr]=$B.pyobj2jsobj(value)}
+return _b_.None}
+return _b_.object.tp_setattro(self,attr,value)}
 function make_report(lines,positions){
 var[lineno,end_lineno,col_offset,end_col_offset]=positions
 lines=lines.slice(lineno-1,end_lineno)
@@ -13558,7 +13582,12 @@ if($B.is_type(exc)){if(! _b_.issubclass(type,_b_.BaseException)){$B.RAISE(_b_.Ty
 if(value===undefined){value=exc}else{
 exc=$B.$call(exc,value)}}
 if(traceback !==undefined){exc.$traceback=traceback}
-await step(self,gen.throw.bind(gen),value)}
+try{
+var res=await step(self,gen.throw.bind(gen),value)}catch(err){gen.$finished=true
+throw err}
+if(res.done ||$B.exact_type(res.value,$GeneratorReturn)){gen.$finished=true
+$B.RAISE(_b_.StopAsyncIteration)}
+return res.value}
 $B.async_generator.tp_methods=["asend","athrow","aclose","__sizeof__"]
 $B.async_generator.noargs_methods=["aclose","__sizeof__"]
 $B.async_generator.classmethods=["__class_getitem__"]
@@ -14361,12 +14390,13 @@ coroutine_funcs.cr_running_get=function(self){}
 coroutine_funcs.cr_running_set=function(self){}
 coroutine_funcs.cr_suspended_get=function(self){}
 coroutine_funcs.cr_suspended_set=function(self){}
-coroutine_funcs.send=function(self){self.$sent=true
-unawaited.unregister(self)
-if(! $B.$isinstance(self,coroutine)){var msg="object is not a coroutine"
+coroutine_funcs.send=function(self){if(! $B.$isinstance(self,coroutine)){var msg="object is not a coroutine"
 if(typeof self=="function" && self.$function_infos &&
 self.$function_infos[$B.func_attrs.flags]& 128){msg+='. Maybe you forgot to call the async function ?'}
 $B.RAISE(_b_.TypeError,msg)}
+if(self.$sent){$B.RAISE(_b_.RuntimeError,"cannot reuse already awaited coroutine")}
+self.$sent=true
+unawaited.unregister(self)
 return self.$func.apply(null,self.$args)}
 coroutine_funcs.throw=function(self){}
 $B.coroutine.tp_methods=["send","throw","close","__sizeof__"]
@@ -17098,13 +17128,14 @@ if(i < len-1){tests.push(`${op}$B.$bool(locals.$test = `+
 `${$B.js_from_ast(value, scopes)}) ? locals.$test : `)}else{
 tests.push(`${$B.js_from_ast(value, scopes)}`)}}}
 return '('+tests.join('')+')'}
-function in_loop(scopes){for(var scope of scopes.slice().reverse()){if(scope.ast instanceof $B.ast.For ||
-scope.ast instanceof $B.ast.While){return true}}
+function is_loop(ast){return ast instanceof $B.ast.For ||
+ast instanceof $B.ast.AsyncFor ||
+ast instanceof $B.ast.While}
+function in_loop(scopes){for(var scope of scopes.slice().reverse()){if(is_loop(scope.ast)){return true}}
 return false}
 $B.ast.Break.prototype.to_js=function(scopes){if(! in_loop(scopes)){compiler_error(this,"'break' outside loop")}
 var js=''
-for(var scope of scopes.slice().reverse()){if(scope.ast instanceof $B.ast.For ||
-scope.ast instanceof $B.ast.While){js+=prefix+`no_break_${scope.id} = false\n`
+for(var scope of scopes.slice().reverse()){if(is_loop(scope.ast)){js+=prefix+`no_break_${scope.id} = false\n`
 break}}
 js+=prefix+`break`
 return js}
