@@ -1663,7 +1663,7 @@ $B.get_class=function(obj){
 if(obj===null){return $B.NullType }
 if(obj===undefined){return $B.UndefinedType }
 var klass=obj.ob_type
-if(klass?.tp_name !==undefined){return Object.hasOwn(obj,$B.OB_TYPE)? obj[$B.OB_TYPE]:klass}
+if(typeof klass?.tp_name=="string"){return Object.hasOwn(obj,$B.OB_TYPE)? obj[$B.OB_TYPE]:klass}
 if(obj[$B.OB_TYPE]){return obj[$B.OB_TYPE]}
 var klass
 switch(typeof obj){case "number":
@@ -1681,10 +1681,11 @@ case "object":
 if(Array.isArray(obj)){return $B.js_array}else if(typeof Node !=="undefined"){
 if(obj instanceof Node){if(obj.tagName){var res=$B.module_getattr($B.imported['browser.html'],obj.tagName)
 return res===$B.NULL ? $B.DOMNode :res}
-return $B.DOMNode}else if(obj instanceof Event){return $B.DOMEvent}else if(obj.ownerDocument){var view=obj.ownerDocument.defaultView
-if(obj instanceof view.Node){if(obj.tagName){var res=$B.module_getattr($B.imported['browser.html'],obj.tagName)
+return $B.DOMNode}else if(obj instanceof Event){return $B.DOMEvent}else if(obj.ownerDocument){
+var view=obj.ownerDocument.defaultView
+if(typeof view?.Node=="function" && obj instanceof view.Node){if(obj.tagName){var res=$B.module_getattr($B.imported['browser.html'],obj.tagName)
 return res===$B.NULL ? $B.DOMNode :res}
-return $B.DOMNode}else if(obj instanceof view.event){return $B.DOMEvent}}else if(obj.defaultView){
+return $B.DOMNode}else if(typeof view?.Event=="function" && obj instanceof view.Event){return $B.DOMEvent}}else if(typeof obj.defaultView?.Node=="function"){
 return $B.DOMNode}}else if(obj instanceof Event){return $B.DOMEvent}
 break}
 return $B.get_jsobj_class(obj)}
