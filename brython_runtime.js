@@ -1455,8 +1455,7 @@ $B.module.tp_setattro(module,key,modobj[key])}catch(err){}}}
 $B.dispatch_load_event(script.script_element)}catch(err){
 console.log('error in loaders',err)
 console.log('frame obj',$B.frame_obj)
-if(err.ob_type===undefined){err.filename=script.filename
-if(err.$py_exc){err=err.$py_exc}else{
+if(err.ob_type===undefined){if($B.known_exception(err)!==undefined){err=$B.known_exception(err)}else{
 if($B.get_option('debug',err)> 2){console.log('JS error',err.stack)}
 var stack=err.$stack,frame_obj=err.$frame_obj,linenums=err.$linenums
 var lineNumber=err.lineNumber
@@ -2089,13 +2088,14 @@ $B.trace_return=function(value){var frame=$B.frame_obj.frame,trace_func=frame.$f
 if(frame[0]==$B.tracefunc.$current_frame_id){
 return _b_.None}
 trace_func(frame,'return',value)}
+$B.stack_before=function(frame_obj){return frame_obj.before===undefined ? frame_obj.prev :frame_obj.before}
 $B.leave_frame=function(arg){
 if($B.frame_obj===null){return}
 if(arg && arg.value !==undefined && $B.tracefunc !==_b_.None){if($B.frame_obj.frame.$f_trace===undefined){$B.frame_obj.frame.$f_trace=$B.tracefunc}
 if($B.frame_obj.frame.$f_trace !==_b_.None){$B.trace_return(arg.value)}}
 if($B.frame_obj===undefined){throw Error('no frame_obj')}
 var frame=$B.frame_obj.frame
-$B.frame_obj=$B.frame_obj.prev
+$B.frame_obj=$B.stack_before($B.frame_obj)
 if(frame.$has_generators){for(var key in frame[1]){if(frame[1][key]&& $B.get_class(frame[1][key])===$B.generator){var gen=frame[1][key]
 if(gen.$frame===undefined){continue}
 var ctx_managers=gen.$frame[1].$context_managers
@@ -4713,7 +4713,7 @@ var elt=next(iterable)
 if(!$B.$bool(elt)){return false}}catch(err){return true}}}
 _b_.anext=function(){var $=$B.args('anext',2,{async_iterator:null,_default:null},arguments,{_default:$B.NULL},null,null)
 var awaitable=$B.$call($B.$getattr($.async_iterator,'__anext__'))
-return $B.promise(awaitable).catch(
+return Promise.resolve($B.awaited(awaitable)[0]).catch(
 function(err){if($B.is_exc(err,[_b_.StopAsyncIteration])){if($._default !==$B.NULL){return $._default}}
 throw err}
 )}
@@ -6140,11 +6140,15 @@ $B.$AlphabeticalCompare=alphabeticalCompare})(__BRYTHON__);
 "use strict";
 (function($B){var _b_=$B.builtins
 $B.del_exc=function(frame){delete frame.$current_exception}
-function unmarkable(exc){return exc===null ||
+function foreign(exc){return exc===null ||
 (typeof exc !=='object' && typeof exc !=='function')||
-! Object.isExtensible(exc)}
-$B.set_exc=function(exc,frame){if(! unmarkable(exc)){exc.__traceback__=exc.__traceback__===_b_.None ? make_tb():exc.__traceback__
-exc.ob_type=exc.ob_type ?? _b_.JavascriptError
+exc.ob_type===undefined}
+var python_exceptions=new WeakMap()
+$B.known_exception=function(js_exc){return python_exceptions.get(js_exc)}
+function thrown(exc){var js_exc=exc.$js_exc
+return js_exc !==undefined && python_exceptions.get(js_exc)===exc ?
+js_exc :exc}
+$B.set_exc=function(exc,frame){if(! foreign(exc)){exc.__traceback__=exc.__traceback__===_b_.None ? make_tb():exc.__traceback__
 exc.suppress_context=exc.suppress_context ?? false
 exc.args=exc.args ??[exc.message]}
 if(frame===undefined){var msg='Internal error: no frame for exception '+_b_.repr(exc)
@@ -6166,7 +6170,7 @@ exc.$positions[$B.frame_obj.count-1]=position
 return exc}
 $B.$raise=function(arg,cause){
 var active_exc=$B.get_exc()
-if(arg===undefined){if(active_exc !==undefined){throw active_exc}
+if(arg===undefined){if(active_exc !==undefined){throw thrown(active_exc)}
 $B.RAISE(_b_.RuntimeError,"No active exception to reraise")}else{
 if($B.$isinstance(arg,_b_.BaseException)){if($B.is_exc(arg,_b_.StopIteration)&&
 $B.frame_obj.frame.$is_generator){
@@ -6174,7 +6178,7 @@ arg=$B.EXC(_b_.RuntimeError,"generator raised StopIteration")}
 arg.__context__=active_exc===undefined ? _b_.None :active_exc
 arg.__cause__=cause ||_b_.None
 arg.suppress_context=cause !==undefined
-throw arg}else if($B.is_type(arg)&& _b_.issubclass(arg,_b_.BaseException)){if(arg===_b_.StopIteration){if($B.frame_obj.frame[1].$is_generator){
+throw thrown(arg)}else if($B.is_type(arg)&& _b_.issubclass(arg,_b_.BaseException)){if(arg===_b_.StopIteration){if($B.frame_obj.frame[1].$is_generator){
 $B.RAISE(_b_.RuntimeError,"generator raised StopIteration")}}
 var exc=$B.$call(arg)
 exc.__context__=active_exc===undefined ? _b_.None :active_exc
@@ -6304,9 +6308,15 @@ stack.reverse()
 return stack}
 $B.exception=function(js_exc){
 var exc
-if(unmarkable(js_exc)){var msg=typeof js_exc=='object' && js_exc !==null ?
-js_exc.name+': '+js_exc.message :String(js_exc)
+if(foreign(js_exc)){
+var known=python_exceptions.get(js_exc)
+if(known !==undefined){return known}
+var error_like=js_exc !==null && typeof js_exc=='object' &&
+typeof js_exc.message=='string',msg=error_like ? js_exc.message :foreign_text(js_exc)
+if(error_like && $B.is_recursion_error(js_exc)){msg="maximum recursion depth exceeded"
+exc=$B.EXC(_b_.RecursionError,msg)}else{
 exc=$B.EXC(_b_.JavascriptError,msg)
+exc[$B.JSOBJ]=js_exc}
 exc.$js_exc=js_exc
 exc.__cause__=_b_.None
 exc.__context__=_b_.None
@@ -6314,30 +6324,17 @@ exc.suppress_context=false
 exc.__traceback__=traceback.$factory(exc)
 exc.args=_b_.tuple.$factory([msg])
 exc.$py_error=true
+if(js_exc !==null &&
+(typeof js_exc=='object' ||typeof js_exc=='function')){python_exceptions.set(js_exc,exc)}
 return exc}
-var klass=$B.get_class(js_exc)
-if(klass===$B.JSObject){if(js_exc.$py_exc){
-return js_exc.$py_exc}
-if(true){
-console.log('Javascript error',js_exc)
-console.log(js_exc.stack)}
-var msg=js_exc.name+': '+js_exc.message
-exc=$B.EXC(_b_.JavascriptError,msg)
-exc.$js_exc=js_exc
-if($B.is_recursion_error(js_exc)){msg="maximum recursion depth exceeded"
-exc=$B.EXC(_b_.RecursionError,msg)}
-exc.__cause__=_b_.None
-exc.__context__=_b_.None
-exc.suppress_context=false
-exc.__traceback__=traceback.$factory(js_exc)
-exc.args=_b_.tuple.$factory([msg])
-exc.$py_error=true
-js_exc.$py_exc=exc}else{
-exc=js_exc}
+exc=js_exc
 exc.__traceback__=exc.__traceback__ ?? traceback.$factory(exc)
 return exc}
+function foreign_text(value){try{
+return String(value)}catch(err){
+return Object.prototype.toString.call(value)}}
 $B.is_exc=function(exc,exc_list){
-if(unmarkable(exc)||$B.get_class(exc)===undefined){exc=$B.exception(exc)}
+if(foreign(exc)){exc=$B.exception(exc)}
 if(! Array.isArray(exc_list)){exc_list=[exc_list]}
 var this_exc_class=$B.is_type(exc)? exc :$B.get_class(exc)
 for(var i=0;i < exc_list.length;i++){var exc_class=exc_list[i]
@@ -6759,7 +6756,7 @@ _b_.JavascriptError.tp_getattro=function(self,attr){var res=_b_.object.tp_getatt
 if(res !==$B.NULL){return res}
 var js=Object.hasOwn(self,'$js_exc')? self.$js_exc :self
 if(js !==null &&(typeof js=='object' ||typeof js=='function')&&
-attr in js){return $B.jsobj2pyobj(js[attr])}
+attr in js){return $B.jsobj2pyobj(js[attr],js)}
 return $B.NULL}
 function make_report(lines,positions){
 var[lineno,end_lineno,col_offset,end_col_offset]=positions
@@ -6985,8 +6982,7 @@ if(suggestion !==_b_.None){trace+=`. Did you mean: '${suggestion}'?`}}else if($B
 err.name)
 if(suggestion !==_b_.None){trace+=`. Did you mean: '${suggestion}'?`}}}}}else{
 trace=err+""}
-if(err.$js_exc){trace+='\n'
-if($B.get_option('debug',err)> 1){trace+=err.$js_exc.stack}}
+if(err.$js_exc && $B.get_option('debug',err)> 1){trace+='\n'+err.$js_exc.stack}
 return trace}
 $B.get_stderr=function(){return $B.imported.sys ?
 $B.module_getattr($B.imported.sys,'stderr'):
@@ -7004,10 +7000,11 @@ if(flush !==_b_.None){$B.$call(flush)}}catch(print_exc_err){
 console.log(print_exc_err)}}
 $B.handle_error=function(err){
 console.log('handle error',$B.frame_obj)
-if(err.$handled){return}
-err.$handled=true
-$B.show_error(err)
-throw err}})(__BRYTHON__);
+var exc=$B.exception(err)
+if(exc.$handled){return}
+exc.$handled=true
+$B.show_error(exc)
+throw thrown(exc)}})(__BRYTHON__);
 ;
 "use strict";
 (function($B){var _b_=$B.builtins,None=_b_.None,range=_b_.range
@@ -13149,7 +13146,8 @@ if(test){console.log('    res',res)}
 return res}}
 JSObj_funcs.bind=function(_self,evt,func){
 var js_func=function(ev){try{
-return $B.$call(func,jsobj2pyobj(ev))}catch(err){if(err.ob_type !==undefined){$B.handle_error(err)}else{
+return $B.$call(func,jsobj2pyobj(ev))}catch(err){if(err?.ob_type !==undefined ||
+$B.known_exception(err)!==undefined){$B.handle_error(err)}else{
 try{
 $B.$getattr($B.get_stderr(),"write")(err)}catch(err1){console.log(err)}}}}
 Object.defineProperty(_self,'$brython_events',{value:_self.$brython_events ||{},writable:true}
@@ -13502,20 +13500,22 @@ async_generator_funcs.__name___set=function(self,value){self.js_gen.$name=value}
 async_generator_funcs.__qualname___get=function(self){return self.js_gen.$name}
 async_generator_funcs.__qualname___set=function(self,value){self.js_gen.$name=value}
 async_generator_funcs.__sizeof__=function(self){$B.RAISE(_b_.NotImplementedError)}
+function step(self,resume,value){var save_frame_obj=$B.frame_obj
+if(self.$frame){$B.frame_obj=$B.push_frame(self.$frame)}
+try{
+return resume(value)}finally{
+$B.frame_obj=save_frame_obj}}
 async_generator_funcs.aclose=async function(self){var gen=self.js_gen
 if(gen.$closing){$B.RAISE(_b_.RuntimeError,"aclose(): asynchronous generator is already running")}
 if(gen.$finished){return _b_.None}
 gen.$finished=true
 gen.$closing=true
-var save_frame_obj=$B.frame_obj
-if(self.$frame){$B.frame_obj=$B.push_frame(self.$frame)}
 var res
 try{
-res=await gen.throw($B.$call(_b_.GeneratorExit))}catch(err){if($B.is_exc(err,[_b_.GeneratorExit,_b_.StopAsyncIteration])){
+res=await step(self,gen.throw.bind(gen),$B.$call(_b_.GeneratorExit))}catch(err){if($B.is_exc(err,[_b_.GeneratorExit,_b_.StopAsyncIteration])){
 return _b_.None}
 throw err}finally{
-gen.$closing=false
-$B.frame_obj=save_frame_obj}
+gen.$closing=false}
 if(! res.done){$B.RAISE(_b_.RuntimeError,"async generator ignored GeneratorExit")}
 return _b_.None}
 async_generator_funcs.ag_await_get=function(self){$B.RAISE(_b_.NotImplementedError)}
@@ -13530,14 +13530,9 @@ async_generator_funcs.asend=async function(self,value){var gen=self.js_gen
 if(gen.$finished){$B.RAISE(_b_.StopAsyncIteration,value)}
 if(gen.ag_running===true){$B.RAISE(_b_.ValueError,"generator already executing")}
 gen.ag_running=true
-var save_frame_obj=$B.frame_obj
-if(self.$frame){$B.frame_obj=$B.push_frame(self.$frame)}
 try{
-var res=await gen.next(value)}catch(err){gen.$finished=true
-$B.frame_obj=save_frame_obj
+var res=await step(self,gen.next.bind(gen),value)}catch(err){gen.$finished=true
 throw err}
-if($B.frame_obj !==null && $B.frame_obj.frame===self.$frame){$B.leave_frame()}
-$B.frame_obj=save_frame_obj
 if(res.done){$B.RAISE(_b_.StopAsyncIteration,value)}
 if($B.exact_type(res.value,$GeneratorReturn)){gen.$finished=true
 $B.RAISE(_b_.StopAsyncIteration,res.value.value)}
@@ -13549,10 +13544,7 @@ if($B.is_type(exc)){if(! _b_.issubclass(type,_b_.BaseException)){$B.RAISE(_b_.Ty
 if(value===undefined){value=exc}else{
 exc=$B.$call(exc,value)}}
 if(traceback !==undefined){exc.$traceback=traceback}
-var save_frame_obj=$B.frame_obj
-if(self.$frame){$B.frame_obj=$B.push_frame(self.$frame)}
-await gen.throw(value)
-$B.frame_obj=save_frame_obj}
+await step(self,gen.throw.bind(gen),value)}
 $B.async_generator.tp_methods=["asend","athrow","aclose","__sizeof__"]
 $B.async_generator.noargs_methods=["aclose","__sizeof__"]
 $B.async_generator.classmethods=["__class_getitem__"]
@@ -13966,7 +13958,8 @@ var self=$.self,event=$.event,func=$.func,options=$.options
 if(func===_b_.None){
 return function(f){return DOMNode.tp_funcs.bind(self,event,f)}}
 var callback=(function(f){return function(ev){try{
-return $B.$call(f,$DOMEvent(ev))}catch(err){if(err.ob_type !==undefined){$B.handle_error(err)}else{
+return $B.$call(f,$DOMEvent(ev))}catch(err){if(err?.ob_type !==undefined ||
+$B.known_exception(err)!==undefined){$B.handle_error(err)}else{
 try{
 $B.$getattr($B.get_stderr(),"write")(err)}catch(err1){console.log(err)}}}}}
 )(func)
@@ -14360,10 +14353,7 @@ if(! $B.$isinstance(self,coroutine)){var msg="object is not a coroutine"
 if(typeof self=="function" && self.$function_infos &&
 self.$function_infos[$B.func_attrs.flags]& 128){msg+='. Maybe you forgot to call the async function ?'}
 $B.RAISE(_b_.TypeError,msg)}
-var res=self.$func.apply(null,self.$args)
-res.then(function(){if(self.$frame_obj){$B.frame_obj=self.$frame_obj}}).
-catch(function(err){if(err.$frame_obj){$B.frame_obj=err.$frame_obj}})
-return res}
+return self.$func.apply(null,self.$args)}
 coroutine_funcs.throw=function(self){}
 $B.coroutine.tp_methods=["send","throw","close","__sizeof__"]
 $B.coroutine.noargs_methods=["close","__sizeof__"]
@@ -14403,23 +14393,29 @@ f.ob_type=$B.function
 f.__annotate__=func.__annotate__
 $B.init_dict(f)
 return f}
-$B.promise=function(obj){if($B.exact_type(obj,coroutine)){
-obj.$frame_obj=$B.frame_obj
-return coroutine.tp_funcs.send(obj)}
-if(typeof obj=="function"){return obj()}
-if(obj instanceof Promise ||typeof obj.then=="function"){
-obj.frame_obj=$B.frame_obj
-return obj.then(function(x){$B.frame_obj=obj.frame_obj
-return $B.jsobj2pyobj(x)}).catch(function(err){$B.frame_obj=obj.frame_obj
-throw $B.exception(err)})}
+$B.awaited=function(obj){if($B.exact_type(obj,coroutine)){return[coroutine.tp_funcs.send(obj),false]}
+if(typeof obj=="function"){return[obj(),false]}
+if(obj instanceof Promise ||typeof obj.then=="function"){return[obj,true]}
 var awaitable=$B.$getattr(obj,'__await__',null)
 if(awaitable !==null){
 awaitable=$B.$call(awaitable)
 if($B.$getattr(awaitable,'__next__',null)===null){$B.RAISE(_b_.TypeError,'__await__() returned non-iterator'+
 ` of type '${$B.class_name(awaitable)}'`)}
-return awaitable}
+return[awaitable,false]}
 $B.RAISE(_b_.TypeError,`object ${$B.class_name(obj)} `+
-`can't be used in 'await' expression`)}})(__BRYTHON__);
+`can't be used in 'await' expression`)}
+$B.promise=function(obj){var frame_obj=$B.frame_obj,[awaited,from_js]=$B.awaited(obj)
+$B.frame_obj=$B.stack_before(frame_obj)
+return Promise.resolve(awaited).then(
+value=>({frame_obj,value,from_js}),error=>({frame_obj,error,from_js})
+)}
+$B.yielded=function(value){$B.frame_obj=$B.stack_before($B.frame_obj)
+return value}
+$B.resumed=function(settled){var frame_obj=settled.frame_obj
+frame_obj.before=$B.frame_obj
+$B.frame_obj=frame_obj
+if('error' in settled){throw settled.from_js ? $B.exception(settled.error):settled.error}
+return settled.from_js ? $B.jsobj2pyobj(settled.value):settled.value}})(__BRYTHON__);
 ;
 
 "use strict";
@@ -15581,7 +15577,7 @@ resolve($B.$DOMEvent(evt))}
 callbacks.push([name,callback])
 $B.DOMNode.tp_funcs.bind(element,name,callback)}})},get:function(){var ajax=$B.module_getattr($B.imported['browser.aio'],'ajax')
 return ajax.bind(null,"GET").apply(null,arguments)},iscoroutine:function(f){return $B.get_class(f)===$B.coroutine},iscoroutinefunction:function(f){return(f.$function_infos[$B.func_attrs.flags]& 128)!=0},post:function(){var ajax=$B.module_getattr($B.imported['browser.aio'],'ajax')
-return ajax.bind(null,"POST").apply(null,arguments)},run:function(){var handle_success=function(){$B.leave_frame()},handle_error=$B.show_error
+return ajax.bind(null,"POST").apply(null,arguments)},run:function(){var handle_success=function(){},handle_error=$B.show_error
 var $=$B.args("run",3,{coro:null,onsuccess:null,onerror:null},arguments,{onsuccess:handle_success,onerror:handle_error})
 var coro=$.coro,onsuccess=$.onsuccess,onerror=$.onerror
 var save_frame_obj=$B.frame_obj
@@ -16963,8 +16959,9 @@ indent(2)
 s+=prefix+`mgr_type_${id} = _b_.type.$factory(mgr_${id}),\n`+
 prefix+`aexit_${id} = $B.$getattr(mgr_type_${id}, '__aexit__'),\n`+
 prefix+`aenter_${id} = $B.$getattr(mgr_type_${id}, '__aenter__'),\n`+
-prefix+`value_${id} = await $B.promise($B.$call(aenter_${id}, mgr_${id})),\n`+
-prefix+`exc_${id} = true\n`
+prefix+`value_${id} = $B.resumed(await $B.promise($B.$call(aenter_${id}, mgr_${id}))),\n`+
+prefix+`exc_${id} = true,\n`+
+prefix+`stack_length_${id} = $B.count_frames()\n`
 if(has_generator){
 s+=prefix+`locals.$context_managers = locals.$context_managers || []\n`+
 `locals.$context_managers.push(mgr_${id})\n`}
@@ -16987,8 +16984,8 @@ s+=prefix+`exc_${id} = false\n`+
 prefix+`err_${id} = $B.exception(err_${id}, frame)\n`+
 prefix+`var lineno_${id} = frame.$lineno\n`+
 prefix+`frame.$lineno = ${lineno}\n`+
-prefix+`var $b = await $B.promise(aexit_${id}(mgr_${id}, $B.get_class(err_${id}), \n`+
-prefix+tab.repeat(4)+`err_${id}, $B.$getattr(err_${id}, '__traceback__')))\n`+
+prefix+`var $b = $B.resumed(await $B.promise(aexit_${id}(mgr_${id}, $B.get_class(err_${id}), \n`+
+prefix+tab.repeat(4)+`err_${id}, $B.$getattr(err_${id}, '__traceback__'))))\n`+
 prefix+`if (! $B.$bool($b)) {\n`+
 prefix+tab+`frame.$lineno = lineno_${id}\n`+
 prefix+tab+`throw err_${id}\n`+
@@ -16999,8 +16996,15 @@ dedent()
 s+=prefix+`}finally{\n`
 indent()
 s+=prefix+`if (exc_${id}) {\n`+
+prefix+tab+`var exit_${id} = $B.count_frames() < stack_length_${id}\n`+
+prefix+tab+`if (exit_${id}) {\n`+
+prefix+tab+tab+`$B.frame_obj = $B.push_frame(frame)\n`+
+prefix+tab+`}\n`+
 prefix+tab+`frame.$lineno = ${lineno}\n`+
-prefix+tab+`await $B.promise(aexit_${id}(mgr_${id}, _b_.None, _b_.None, _b_.None))\n`+
+prefix+tab+`$B.resumed(await $B.promise(aexit_${id}(mgr_${id}, _b_.None, _b_.None, _b_.None)))\n`+
+prefix+tab+`if (exit_${id}) {\n`+
+prefix+tab+tab+`$B.leave_frame()\n`+
+prefix+tab+`}\n`+
 prefix+`}\n`
 dedent()
 s+=prefix+`}\n`
@@ -17052,7 +17056,7 @@ scopes[ix].ast instanceof $B.ast.GeneratorExp){scopes[ix].has_await=true
 ix--
 while(scopes[ix].parent){ix--}}
 if(scopes[ix].ast instanceof $B.ast.AsyncFunctionDef){scopes[ix].has_await=true
-return `await $B.promise(${$B.js_from_ast(this.value, scopes)})`}else if(scopes[ix].ast instanceof $B.ast.FunctionDef){compiler_error(this,"'await' outside async function",this.value)}else{
+return `$B.resumed(await $B.promise(${$B.js_from_ast(this.value, scopes)}))`}else if(scopes[ix].ast instanceof $B.ast.FunctionDef){compiler_error(this,"'await' outside async function",this.value)}else{
 compiler_error(this,"'await' outside function",this.value)}}
 $B.ast.BinOp.prototype.to_js=function(scopes){var res
 var inum=add_to_positions(scopes,this)
@@ -17340,7 +17344,7 @@ prefix+`iter_${id} = $B.$call($B.$getattr(type_${id}, "__aiter__"), iter_${id})\
 prefix+`while (true) {\n`
 indent()
 js+=prefix+`try {\n`+
-prefix+tab+`var next_${id} = await $B.promise($B.$call(_b_.anext, iter_${id}))\n`+
+prefix+tab+`var next_${id} = $B.resumed(await $B.promise($B.$call(_b_.anext, iter_${id})))\n`+
 prefix+`} catch (err) {\n`+
 prefix+tab+`if ($B.is_exc(err, [_b_.StopAsyncIteration])) {\n`+
 prefix+tab+tab+`break\n`+
@@ -18434,6 +18438,8 @@ var scope=last_scope(scopes)
 if(scope.type !='def'){compiler_error(this,"'yield' outside function")}
 last_scope(scopes).is_generator=true
 var value=this.value ? $B.js_from_ast(this.value,scopes):'_b_.None'
+if(scope.ast instanceof $B.ast.AsyncFunctionDef){
+return `yield $B.yielded(${value})`}
 return `yield ${value}`}
 $B.ast.YieldFrom.prototype.to_js=function(scopes){
 var scope=last_scope(scopes)
