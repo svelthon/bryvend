@@ -5180,6 +5180,10 @@ if(klass===$B.UnionType){for(kls of cls.args){if($B.$isinstance(obj,kls)){return
 return false}
 if(klass===$B.GenericAlias){
 $B.RAISE(_b_.TypeError,'isinstance() arg 2 cannot be a parameterized generic')}
+if(typeof cls=='function' && cls.ob_type===undefined){var func=cls.$js_func ?? cls
+if(typeof func.prototype=='object' && func.prototype !==null){if(obj===null ||typeof obj !='object'){return false}
+var held=obj.ob_type===undefined ? obj :obj.$js_exc ?? obj
+return held instanceof func}}
 if(! cls.tp_bases){$B.RAISE(_b_.TypeError,"isinstance() arg 2 must be a type, "+
 "a tuple of types, or a union"
 )}
@@ -12884,8 +12888,7 @@ for(var o=jsobj;o !==null && then===undefined;o=Object.getPrototypeOf(o)){then=O
 if(jsobj instanceof Promise ||typeof then?.value=="function"){return jsobj}
 if(typeof jsobj==="function"){
 if(jsobj.ob_type !==undefined){return jsobj}
-var known_class=JS_CLASSES.get(jsobj)
-if(known_class !==undefined){return known_class}
+if(JS_CLASSES.has(jsobj)||$B.is_js_class(jsobj)){return jsclass2pyclass(jsobj)}
 _this=_this===undefined ? null :_this
 let made
 if(_this===null){made=JS_FUNCTIONS}else if(typeof _this==='object' ||typeof _this==='function'){made=JS_METHODS.get(_this)
@@ -12899,7 +12902,8 @@ if(arg !==null && arg.constructor===Object && arg[$B.KW]){$B.RAISE(_b_.TypeError
 'Javascript functions')}
 args[i]=pyobj2jsobj(arg,memo)}
 try{
-return jsobj2pyobj(jsobj.apply(_this,args))}catch(err){throw $B.exception(err)}}
+return jsobj2pyobj($B.js_constructs(jsobj)? new jsobj(...args):
+jsobj.apply(_this,args))}catch(err){throw $B.exception(err)}}
 made?.set(jsobj,res)
 res[JSOBJ]=jsobj
 Object.defineProperty(res,'$js_func',{value:jsobj})
@@ -13049,6 +13053,12 @@ return _b_.type.tp_funcs.__subclasscheck__(cls,subclass)}
 $B.JSClass.tp_methods=["__instancecheck__","__subclasscheck__"]
 $B.is_js_class=function(func){return typeof func=='function' &&
 /^class[\s{]/.test(Function.prototype.toString.call(func))}
+var CALLABLE_NATIVES=new Set([Object,Function,Array,Number,Boolean,String,Symbol,BigInt,Date,RegExp,Error,EvalError,RangeError,ReferenceError,SyntaxError,TypeError,URIError,globalThis.AggregateError])
+$B.js_constructs=function(func){if(typeof func !='function' ||CALLABLE_NATIVES.has(func)){return false}
+if(func===globalThis.Proxy){return true}
+var proto=Object.getOwnPropertyDescriptor(func,'prototype')?.value
+return typeof proto=='object' && proto !==null &&
+/\[native code\]\s*\}$/.test(Function.prototype.toString.call(func))}
 function jsclass2pyclass(js_class){
 var known=JS_CLASSES.get(js_class)
 if(known !==undefined){return known}
