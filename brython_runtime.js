@@ -6149,9 +6149,11 @@ $B.del_exc=function(frame){delete frame.$current_exception}
 function foreign(exc){return exc===null ||
 (typeof exc !=='object' && typeof exc !=='function')||
 (exc.ob_type===undefined && exc[$B.OB_TYPE]===undefined)}
-function cause_of(cause){if(cause===undefined){return _b_.None}
-return cause !==null && typeof cause=='object' && foreign(cause)?
-$B.exception(cause):cause}
+function cause_of(cause){if(cause===undefined ||cause===_b_.None){return _b_.None}
+if(cause !==null && typeof cause=='object' && foreign(cause)){return $B.exception(cause)}
+if($B.$isinstance(cause,_b_.BaseException)){return cause}
+if($B.is_type(cause)&& _b_.issubclass(cause,_b_.BaseException)){return $B.$call(cause)}
+$B.RAISE(_b_.TypeError,"exception causes must derive from BaseException")}
 var python_exceptions=new WeakMap()
 $B.known_exception=function(js_exc){return python_exceptions.get(js_exc)}
 function thrown(exc){var js_exc=exc.$js_exc
@@ -6194,12 +6196,12 @@ exc.__context__=active_exc===undefined ? _b_.None :active_exc
 exc.__cause__=cause_of(cause)
 exc.suppress_context=cause !==undefined
 throw exc}else if(arg !==null &&(typeof arg=='object' ||
-typeof arg=='function')&& foreign(arg)){if(typeof arg=='function'){
-var js_class=arg.$js_func ?? arg
+typeof arg=='function')&&(foreign(arg)||
+(arg.ob_type===$B.JSClass && arg.tp_bases.length==0))){if(typeof arg=='function' ||arg.ob_type===$B.JSClass){
+var js_class=arg.ob_type===$B.JSClass ? arg.js_class :
+arg.$js_func ?? arg
 if(js_class !==Error && !(js_class.prototype instanceof Error)){$B.RAISE(_b_.TypeError,"exceptions must derive from BaseException")}
-arg=new js_class()}else if(! python_exceptions.has(arg)&& !(arg instanceof Error)&&
-Object.prototype.toString.call(arg)!='[object Error]'){
-$B.RAISE(_b_.TypeError,"exceptions must derive from BaseException")}
+arg=new js_class()}
 var held=$B.exception(arg)
 held.__context__=active_exc===undefined ? _b_.None :active_exc
 held.__cause__=cause_of(cause)
@@ -12868,6 +12870,8 @@ for(var o=jsobj;o !==null && then===undefined;o=Object.getPrototypeOf(o)){then=O
 if(jsobj instanceof Promise ||typeof then?.value=="function"){return jsobj}
 if(typeof jsobj==="function"){
 if(jsobj.ob_type !==undefined){return jsobj}
+var known_class=JS_CLASSES.get(jsobj)
+if(known_class !==undefined){return known_class}
 _this=_this===undefined ? null :_this
 let made
 if(_this===null){made=JS_FUNCTIONS}else if(typeof _this==='object' ||typeof _this==='function'){made=JS_METHODS.get(_this)
@@ -13019,13 +13023,29 @@ $B.JSClass.tp_new=function(cls,args,kw){var kls=_b_.type.tp_new(cls,args,kw)
 kls.js_class=kls.tp_bases[0].js_class
 return kls}
 const JS_CLASSES=new WeakMap()
+function made_of_js(cls){return cls?.ob_type===$B.JSClass && cls.tp_bases.length==0}
+var JSClass_funcs=$B.JSClass.tp_funcs={}
+JSClass_funcs.__instancecheck__=function(cls,instance){if(made_of_js(cls)&& instance !==null && typeof instance=='object' &&
+instance.ob_type===undefined){return instance instanceof cls.js_class}
+return _b_.type.tp_funcs.__instancecheck__(cls,instance)}
+JSClass_funcs.__subclasscheck__=function(cls,subclass){if(made_of_js(cls)&& made_of_js(subclass)){return subclass.js_class===cls.js_class ||
+subclass.js_class.prototype instanceof cls.js_class}
+return _b_.type.tp_funcs.__subclasscheck__(cls,subclass)}
+$B.JSClass.tp_methods=["__instancecheck__","__subclasscheck__"]
+$B.is_js_class=function(func){return typeof func=='function' &&
+/^class[\s{]/.test(Function.prototype.toString.call(func))}
 function jsclass2pyclass(js_class){
 var known=JS_CLASSES.get(js_class)
 if(known !==undefined){return known}
 var cls={ob_type:$B.JSClass,tp_bases:[],tp_name:js_class.name,tp_flags:$B.TPFLAGS.HEAPTYPE |$B.TPFLAGS.BASETYPE,js_class}
 $B.init_dict(cls)
 cls.tp_mro=$B.make_mro(cls)
-$B.set_to_dict(cls,'__new__',function(klass,...args){var res={ob_type:klass}
+$B.set_to_dict(cls,'__new__',function(klass,...args){if(klass===cls){
+var keywords=args[args.length-1]?.[$B.KW]
+if(keywords !==undefined){if(! $B.keyword_is_empty(keywords)){$B.RAISE(_b_.TypeError,"A Javascript function can't take keyword arguments")}
+args=args.slice(0,-1)}
+return $B.JSClass.tp_getattro(cls,'new')(...args)}
+var res={ob_type:klass}
 $B.init_dict(res)
 return res}
 )
@@ -13131,8 +13151,7 @@ return class_attr}}
 return $B.NULL}
 if(js_attr !==null &&
 js_attr.toString &&
-typeof js_attr=='function' &&
-Function.prototype.toString.call(js_attr).startsWith('class ')){
+$B.is_js_class(js_attr)){
 return jsclass2pyclass(js_attr)}else if(typeof js_attr==='function'){
 return jsobj2pyobj(js_attr,_self.$js_func ||_self)}else{
 if(test){console.log('jsobj2pyobj on',js_attr)}
@@ -13179,8 +13198,7 @@ if(typeof self.getNamedItem=='function'){var res=self.getNamedItem(attr)
 if(res !==undefined){return jsobj2pyobj(res)}}}
 if(js_attr !==null && js_attr !==undefined &&
 js_attr.toString &&
-typeof js_attr=='function' &&
-Function.prototype.toString.call(js_attr).startsWith('class ')){
+$B.is_js_class(js_attr)){
 return jsclass2pyclass(js_attr)}else if(typeof js_attr==='function'){
 return jsobj2pyobj(js_attr,self.$js_func ||self)}else{
 if(test){console.log('jsobj2pyobj on',js_attr)}
@@ -15331,7 +15349,7 @@ modules['javascript']={"this":function(){
 if($B.js_this===undefined){return $B.builtins.None}
 return $B.jsobj2pyobj($B.js_this)},Array:$B.js_array,Date:globalThis.Date,
 extends:function(js_constr){if((!js_constr.$js_func)||
-! js_constr.$js_func.toString().startsWith('class ')){console.log(js_constr)
+! $B.is_js_class(js_constr.$js_func)){console.log(js_constr)
 $B.RAISE(_b_.TypeError,'argument of extend must be a Javascript class')}
 js_constr.ob_type=_b_.type
 return function(obj){obj.tp_bases.splice(0,0,js_constr)
