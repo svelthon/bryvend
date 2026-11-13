@@ -5209,19 +5209,20 @@ let _class
 if($B.is_tuple(class_or_tuple)){for(_class of class_or_tuple){if(issubclass(cls,_class)){return true}}
 return false}
 _class=class_or_tuple 
-var js_sub=js_constructor(cls),js_base=js_constructor(_class)
+var js_cls=js_constructor(cls),js_sub=js_cls,js_base=js_constructor(_class)
 if(js_sub !==undefined ||js_base !==undefined){if(js_sub !==undefined && _class===_b_.object){return true}
 js_sub=js_sub ?? cls?.js_class
 js_base=js_base ?? _class?.js_class
 if(typeof js_sub=='function' && typeof js_base=='function'){return js_sub===js_base ||js_sub.prototype instanceof js_base}
 if($B.is_type(js_sub===undefined ? cls :_class)){return false}}
-if(! $B.is_type(cls)){$B.RAISE(_b_.TypeError,"issubclass() arg 1 must be a class")}
+if(! $B.is_type(cls)&& js_cls===undefined){$B.RAISE(_b_.TypeError,"issubclass() arg 1 must be a class")}
 let class_type=$B.get_class(_class)
 if(class_type===$B.GenericAlias){$B.RAISE(_b_.TypeError,'issubclass() arg 2 cannot be a parameterized generic')}
 if(class_type===_b_.type){if(cls===_class){return true}
 return $B.get_mro(cls).indexOf(_class)>-1}
 var sch=$B.type_getattribute($B.get_class(_class),'__subclasscheck__',$B.NULL)
-if(sch===$B.NULL){return false}
+if(sch===$B.NULL){$B.RAISE(_b_.TypeError,"issubclass() arg 2 must be a class, "+
+"a tuple of classes, or a union")}
 return $B.$call(sch,_class,cls)}
 $B.iterator.tp_iter=function(self){return self}
 $B.iterator.tp_iternext=function*(self){
@@ -6177,12 +6178,16 @@ if(js_class===Error ||js_class?.prototype instanceof Error){return $B.exception(
 $B.RAISE(_b_.TypeError,"exception causes must derive from BaseException")}
 var python_exceptions=new WeakMap()
 $B.known_exception=function(js_exc){return python_exceptions.get(js_exc)}
-function thrown(exc){var js_exc=exc.$js_exc
+function thrown(exc){if(exc.jsobj instanceof Error && $B.get_class(exc).ob_type===$B.JSClass){exc.$js_exc=exc.jsobj
+python_exceptions.set(exc.jsobj,exc)}
+var js_exc=exc.$js_exc
 return js_exc !==undefined && python_exceptions.get(js_exc)===exc ?
 js_exc :exc}
-$B.set_exc=function(exc,frame){if(! foreign(exc)){exc.__traceback__=exc.__traceback__===_b_.None ? make_tb():exc.__traceback__
-exc.suppress_context=exc.suppress_context ?? false
-exc.args=exc.args ??[exc.message]}
+$B.set_exc=function(exc,frame){
+var own=foreign(exc)? python_exceptions.get(exc):exc
+if(own !==undefined){own.__traceback__=own.__traceback__===_b_.None ? make_tb():own.__traceback__
+own.suppress_context=own.suppress_context ?? false
+own.args=own.args ??[own.message]}
 if(frame===undefined){var msg='Internal error: no frame for exception '+_b_.repr(exc)
 console.error(['Traceback (most recent call last):',$B.print_stack(exc.$frame_obj),msg].join('\n'))
 if($B.get_option('debug',exc)> 1){console.log(exc.args)
@@ -6216,7 +6221,7 @@ var exc=$B.$call(arg)
 exc.__context__=active_exc===undefined ? _b_.None :active_exc
 exc.__cause__=cause_of(cause)
 exc.suppress_context=cause !==undefined
-throw exc}else if(arg !==null &&(typeof arg=='object' ||
+throw thrown(exc)}else if(arg !==null &&(typeof arg=='object' ||
 typeof arg=='function')&&(foreign(arg)||
 (arg.ob_type===$B.JSClass && arg.tp_bases.length==0))){if(typeof arg=='function' ||arg.ob_type===$B.JSClass){
 var js_class=arg.ob_type===$B.JSClass ? arg.js_class :
@@ -6227,17 +6232,7 @@ var held=$B.exception(arg)
 held.__context__=active_exc===undefined ? _b_.None :active_exc
 held.__cause__=cause_of(cause)
 held.suppress_context=cause !==undefined
-throw thrown(held)}else if($B.get_class(arg)?.ob_type===$B.JSClass &&
-arg.jsobj instanceof Error){
-var js_exc=arg.jsobj
-arg.$js_exc=js_exc
-arg.args=arg.args ?? _b_.tuple.$factory([js_exc.message])
-arg.__traceback__=arg.__traceback__ ?? traceback.$factory(arg)
-arg.__context__=active_exc===undefined ? _b_.None :active_exc
-arg.__cause__=cause_of(cause)
-arg.suppress_context=cause !==undefined
-python_exceptions.set(js_exc,arg)
-throw js_exc}else{
+throw thrown(held)}else{
 $B.RAISE(_b_.TypeError,"exceptions must derive from BaseException")}}}
 $B.print_stack=function(frame_obj){
 var stack=make_frames_stack(frame_obj ||$B.frame_obj)
@@ -6401,12 +6396,9 @@ var js_class=$B.js_class_of(exc_class)
 if(js_class !==undefined){var held=exc.$js_exc
 if(held !==null && typeof held=='object' && held instanceof js_class){return true}
 continue}
-if(_b_.issubclass(this_exc_class,exc_class)){return true}
-if(exc.$js_exc !==undefined && this_exc_class !==_b_.JavascriptError &&
-_b_.issubclass(_b_.JavascriptError,exc_class)){return true}}
+if(_b_.issubclass(this_exc_class,exc_class)){return true}}
 return false}
 $B.js_class_of=function(cls){if(cls?.ob_type===$B.JSClass){return cls.tp_bases.length==0 ? cls.js_class :undefined}
-if(cls?.ob_type===$B.JSConstructor){return $B.js_subclass(cls)}
 if(typeof cls=='function' && cls.ob_type===undefined){var func=cls.$js_func ?? cls
 return typeof func.prototype=='object' ? func :undefined}
 return undefined}
@@ -12864,7 +12856,7 @@ $B.RAISE(_b_.TypeError,`cannot send '${$B.class_name(obj)}' object`)}
 $B.structuredclone2pyobj=function(obj){if(obj===null){
 return _b_.None}else if(obj===undefined){return _b_.None}else if(typeof obj=="boolean"){return obj}else if(typeof obj=="bigint"){
 return obj}else if(typeof obj=="string" ||obj instanceof String){return $B.String(obj)}else if(typeof obj=="number" ||obj instanceof Number){obj+=0 
-return Number.isInteger(obj)?
+return Number.isSafeInteger(obj)?
 obj :
 {ob_type:_b_.float,value:obj}}else if(Array.isArray(obj)||$B.exact_type(obj,_b_.list)||
 $B.exact_type(obj,_b_.tuple)){let res=_b_.list.$factory()
@@ -12894,9 +12886,7 @@ if(jsobj===null){return null}else if(jsobj===undefined){return _b_.None}
 switch(typeof jsobj){case 'boolean':
 return jsobj
 case 'number':
-if(jsobj % 1===0){if(! Number.isSafeInteger(jsobj)){
-return BigInt(jsobj)}
-return jsobj}
+if(Number.isSafeInteger(jsobj)){return jsobj}
 return _b_.float.$factory(jsobj)
 case 'bigint':
 return jsobj
@@ -13062,23 +13052,33 @@ $B.search_in_mro(self,attr,$B.NULL)!==$B.NULL){return _b_.type.tp_setattro(self,
 if(value===$B.NULL){delete self.js_class[attr]}else{
 self.js_class[attr]=pyobj2jsobj(value)}
 return _b_.None}
-$B.JSClass.tp_new=function(cls,args,kw){var kls=_b_.type.tp_new(cls,args,kw)
+var is_error_class=function(js_class){return js_class===Error ||js_class.prototype instanceof Error}
+var positional=function(args){return args[args.length-1]?.[$B.KW]===undefined ? args :args.slice(0,-1)}
+$B.JSClass.tp_new=function(cls,args,kw){var[name,bases,dict]=args
+if(is_error_class(bases[0].js_class)&&
+! bases.some(base=> _b_.issubclass(base,_b_.BaseException))){args=[name,$B.fast_tuple([...bases,_b_.Exception]),dict]}
+var kls=_b_.type.tp_new(cls,args,kw)
 kls.js_class=kls.tp_bases[0].js_class
 return kls}
 const JS_CLASSES=new WeakMap()
 function made_of_js(cls){return cls?.ob_type===$B.JSClass && cls.tp_bases.length==0}
 var JSClass_funcs=$B.JSClass.tp_funcs={}
 JSClass_funcs.__instancecheck__=function(cls,instance){if(made_of_js(cls)&& instance !==null && typeof instance=='object'){if(instance.ob_type===undefined){return instance instanceof cls.js_class}
-var held=instance.$js_exc ?? instance
+var held=instance.$js_exc ?? instance.jsobj ?? instance
 if(held instanceof cls.js_class){return true}}
 return _b_.type.tp_funcs.__instancecheck__(cls,instance)}
-JSClass_funcs.__subclasscheck__=function(cls,subclass){if(made_of_js(cls)&& made_of_js(subclass)){return subclass.js_class===cls.js_class ||
-subclass.js_class.prototype instanceof cls.js_class}
+JSClass_funcs.__subclasscheck__=function(cls,subclass){if(made_of_js(cls)&& subclass?.ob_type===$B.JSClass &&
+(subclass.js_class===cls.js_class ||
+subclass.js_class.prototype instanceof cls.js_class)){return true}
 return _b_.type.tp_funcs.__subclasscheck__(cls,subclass)}
 $B.JSClass.tp_methods=["__instancecheck__","__subclasscheck__"]
 $B.is_js_class=function(func){return typeof func=='function' &&
 /^class[\s{]/.test(Function.prototype.toString.call(func))}
 var NATIVE=/\[native code\]\s*\}$/
+var refused=function(err,func){var name=Object.getOwnPropertyDescriptor(func,'name')?.value
+if(typeof name !='string'){return false}
+name=name.replace(/^(bound\s)+/,'')
+return name !=='' && err.message.split(/[^\w$]+/).includes(name)}
 var NEEDS_NEW=/without\s(?:'new'|\|new\||new\sis\s)|requires\s'new'|'new'\sis\srequired|with\s'new'|the\s'new'\soperator/
 var is_constructor=function(func){try{
 new(new Proxy(func,{construct(){return{}}}))
@@ -13096,7 +13096,7 @@ $B.js_call=function(func,self,args){if($B.js_constructs(func)){return Reflect.co
 try{
 return Reflect.apply(func,self,args)}catch(err){if(err instanceof TypeError && NEEDS_NEW.test(err.message)&&
 NATIVE.test(Function.prototype.toString.call(func))&&
-is_constructor(func)){return Reflect.construct(func,args)}
+refused(err,func)&& is_constructor(func)){return Reflect.construct(func,args)}
 throw err}}
 function jsclass2pyclass(js_class){
 var known=JS_CLASSES.get(js_class)
@@ -13109,18 +13109,34 @@ var keywords=args[args.length-1]?.[$B.KW]
 if(keywords !==undefined){if(! $B.keyword_is_empty(keywords)){$B.RAISE(_b_.TypeError,"A Javascript function can't take keyword arguments")}
 args=args.slice(0,-1)}
 return $B.JSClass.tp_getattro(cls,'new')(...args)}
+if(_b_.issubclass(klass,_b_.BaseException)){
+args=positional(args)
+var exc=_b_.BaseException.tp_new(klass,args)
+exc.jsobj=new cls.js_class(...args)
+return exc}
 var res={ob_type:klass}
 $B.init_dict(res)
 return res}
 )
-$B.set_to_dict(cls,'__init__',function(self,...args){self.jsobj=new cls.js_class(...args)}
+$B.set_to_dict(cls,'__init__',function(self,...args){if(! $B.$isinstance(self,_b_.BaseException)){self.jsobj=new cls.js_class(...args)
+return}
+args=positional(args)
+var held=self.jsobj
+if(held===undefined ||args.length !=self.args.length ||
+args.some((arg,i)=> arg !==self.args[i])){
+self.jsobj=new cls.js_class(...args)
+for(var key of Object.keys(held ??{})){if(! Object.hasOwn(self.jsobj,key)){self.jsobj[key]=held[key]}}}
+self.args=$B.fast_tuple(args)}
 )
-$B.set_to_dict(cls,'__getattr__',function(self,attr){return jsobj2pyobj(self.jsobj[attr],self.jsobj)}
+$B.set_to_dict(cls,'__getattr__',function(self,attr){
+var jsobj=self.jsobj
+if(jsobj===undefined ||jsobj===null ||!(attr in Object(jsobj))){throw $B.attr_error(attr,self)}
+return jsobj2pyobj(jsobj[attr],jsobj)}
 )
 $B.make_getattr(cls)
 $B.set_to_dict(cls,'__setattr__',function(self,attr,value){self.jsobj[attr]=pyobj2jsobj(value)}
 )
-if(js_class===Error ||js_class.prototype instanceof Error){
+if(is_error_class(js_class)){
 $B.set_to_dict(cls,'__str__',function(self){return String(self.jsobj.message)}
 )}
 $B.make_new(cls)
@@ -13207,7 +13223,16 @@ $B.JSObj.tp_setattro=function(self,attr,value){if(value===$B.NULL){delete self[a
 return}
 self[attr]=$B.pyobj2jsobj(value)
 return _b_.None}
-$B.JSObj.mp_subscript=function(_self,key){if(typeof key=="string"){var res=$B.JSObj.tp_getattro(_self,key)
+var is_typed_array=function(obj){return ArrayBuffer.isView(obj)&& !(obj instanceof DataView)}
+var typed_index=function(self,key){var rank=$B.PyNumber_Index(key)
+if(typeof rank=='number' && rank < 0){rank+=self.length}
+if(typeof rank !='number' ||rank < 0 ||rank >=self.length){$B.RAISE(_b_.IndexError,"index out of range")}
+return rank}
+$B.JSObj.mp_subscript=function(_self,key){if(is_typed_array(_self)&& typeof key !="string" && typeof key !="symbol"){if($B.exact_type(key,_b_.slice)){var{start,stop,step}=_b_.slice.$conv_for_seq(key,_self.length),items=[]
+for(var i=start;step > 0 ? i < stop :i > stop;i+=step){items.push(_self[i])}
+return jsobj2pyobj(_self.constructor.from(items))}
+return jsobj2pyobj(_self[typed_index(_self,key)])}
+if(typeof key=="string"){var res=$B.JSObj.tp_getattro(_self,key)
 if(res===$B.NULL){$B.RAISE(_b_.KeyError,key)}
 return res}else if(typeof key=="number" ||typeof key=="symbol"){if(_self[key]!==undefined){return jsobj2pyobj(_self[key])}
 if(typeof _self.length=='number'){if((typeof key=="number" ||typeof key=="boolean")&&
@@ -13222,7 +13247,9 @@ let offset=0
 for(var i=_slice.start;i < _slice.stop;i+=_slice.step){res[offset++]=_self.item(i)}
 return res}
 $B.RAISE(_b_.KeyError,key)}
-$B.JSObj.mp_ass_subscript=function(){return $B.JSObj.tp_setattro.apply(null,arguments)}
+$B.JSObj.mp_ass_subscript=function(self,key,value){if(is_typed_array(self)&& typeof key !="string" && typeof key !="symbol" &&
+! $B.exact_type(key,_b_.slice)){key=typed_index(self,key)}
+return $B.JSObj.tp_setattro(self,key,value)}
 $B.JSObj.tp_repr=function(self){if(typeof self=='number'){return self+''}
 var func=typeof self=='function' ? self.$js_func ?? self :undefined
 if(func && func.name && globalThis[func.name]===func){return `<function window.${func.name}>`}
@@ -13478,11 +13505,8 @@ for(var item of _b_.dict.$iter_items(cl_dict)){new_js_class[item.key]=item.value
 return new_js_class}
 $B.set_func_names($B.JSMeta,"builtins")
 $B.JSConstructor=$B.make_builtin_class('JavascriptConstructor',[_b_.type])
-$B.js_subclass=function(cls){if(! Object.hasOwn(cls,'$js_class')){var base=cls.tp_bases[0][$B.JSOBJ]
-cls.$js_class=class extends base{}
-Object.defineProperty(cls.$js_class,'name',{value:cls.tp_name})}
-return cls.$js_class}
-$B.JSConstructor.tp_call=function(self,...args){return jsobj2pyobj(new($B.js_subclass(self))(...args))}
+$B.JSConstructor.tp_call=function(self,...args){var js_constr=self.tp_bases[0][$B.JSOBJ]
+return jsobj2pyobj(new js_constr(...args))}
 $B.JSFunction=$B.make_builtin_class('JavascriptFunction')
 $B.JSFunction.tp_getattro=function(self,attr){if(attr==='__name__' ||attr==='__qualname__'){
 var jsf=self[JSOBJ]||self
@@ -13500,6 +13524,10 @@ $B.JSFunction.tp_descr_get=function(self,obj){if(obj===$B.NULL){return self}
 return $B.$call($B.method,self,obj)}
 $B.JSFunction.tp_call=function(self,...args){return self(...args)}
 $B.JSFunction.tp_new=function(cls,args,kw){var[name,bases,dict]=args
+var js_constr=bases[0][$B.JSOBJ]
+if(typeof js_constr?.prototype=='object' && js_constr.prototype !==null){
+args=[name,$B.fast_tuple([jsclass2pyclass(js_constr),...bases.slice(1)]),dict]
+return $B.JSClass.tp_new($B.JSClass,args,kw)}
 var cls={ob_type:$B.JSConstructor,tp_name:name,tp_bases:bases}
 $B.set_dict(cls,dict)
 cls.tp_mro=[cls,_b_.object]
@@ -15393,10 +15421,9 @@ return obj}}
 super_class.tp_getattro=function(self,attr){if(attr=="__init__" ||attr=="__call__"){return self.__init__}
 return $B.$getattr(self.__self_class__,attr,$B.NULL)}
 $B.set_func_names(super_class,"javascript")
-modules['javascript']={"this":function(){
-var js_this=$B.js_this
-for(var frame_obj=$B.frame_obj;frame_obj;frame_obj=frame_obj.prev){if(Object.hasOwn(frame_obj.frame,'$js_this')){js_this=frame_obj.frame.$js_this
-break}}
+$B.frame_js_this=function(){for(var frame_obj=$B.frame_obj;frame_obj;frame_obj=frame_obj.prev){if(Object.hasOwn(frame_obj.frame,'$js_this')){return frame_obj.frame.$js_this}}
+return $B.js_this}
+modules['javascript']={"this":function(){var js_this=$B.frame_js_this()
 if(js_this===undefined){return $B.builtins.None}
 return $B.jsobj2pyobj(js_this)},Array:$B.js_array,Date:globalThis.Date,
 extends:function(js_constr){if((!js_constr.$js_func)||
@@ -16850,6 +16877,7 @@ prefix+tab+tab+`locals = ${comp.locals_name}\n`+
 prefix+`locals['.0'] = expr\n`+
 prefix+`var frame = ["<${comp.type.toLowerCase()}>", ${comp.locals_name}, `+
 `${JSON.stringify(comp.module_name)}, ${comp.globals_name}]\n`+
+prefix+`frame.$js_this = $B.frame_js_this()\n`+
 prefix+`frame.$has_generators = true\n`+
 prefix+`frame.__file__ = ${JSON.stringify(scopes.filename)}\n`+
 prefix+`frame.$lineno = ${comp.ast.lineno}\n`+
