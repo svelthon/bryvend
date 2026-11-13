@@ -1697,7 +1697,9 @@ if(Array.isArray(cls)){for(var item of cls){if(klass===item){return true}}
 return false}else{
 return klass===cls}}
 $B.class_name=function(obj){var klass=$B.get_class(obj)
-if(klass===$B.JSObj){return 'Javascript '+obj.constructor.name}else{
+if(klass===$B.JSObj){
+return 'Javascript '+(obj.constructor?.name ??
+Object.prototype.toString.call(obj).slice(8,-1))}else{
 return klass.tp_name ?? klass.__name__}}
 $B.get_mro=function(klass){return klass.tp_mro ?? klass.__mro__}
 $B.get_name=function(klass){return klass.tp_name ?? klass.__name__}
@@ -5208,7 +5210,11 @@ if($B.is_tuple(class_or_tuple)){for(_class of class_or_tuple){if(issubclass(cls,
 return false}
 _class=class_or_tuple 
 var js_sub=js_constructor(cls),js_base=js_constructor(_class)
-if(js_sub !==undefined && js_base !==undefined){return js_sub===js_base ||js_sub.prototype instanceof js_base}
+if(js_sub !==undefined ||js_base !==undefined){if(js_sub !==undefined && _class===_b_.object){return true}
+js_sub=js_sub ?? cls?.js_class
+js_base=js_base ?? _class?.js_class
+if(typeof js_sub=='function' && typeof js_base=='function'){return js_sub===js_base ||js_sub.prototype instanceof js_base}
+if($B.is_type(js_sub===undefined ? cls :_class)){return false}}
 if(! $B.is_type(cls)){$B.RAISE(_b_.TypeError,"issubclass() arg 1 must be a class")}
 let class_type=$B.get_class(_class)
 if(class_type===$B.GenericAlias){$B.RAISE(_b_.TypeError,'issubclass() arg 2 cannot be a parameterized generic')}
@@ -6221,7 +6227,17 @@ var held=$B.exception(arg)
 held.__context__=active_exc===undefined ? _b_.None :active_exc
 held.__cause__=cause_of(cause)
 held.suppress_context=cause !==undefined
-throw thrown(held)}else{
+throw thrown(held)}else if($B.get_class(arg)?.ob_type===$B.JSClass &&
+arg.jsobj instanceof Error){
+var js_exc=arg.jsobj
+arg.$js_exc=js_exc
+arg.args=arg.args ?? _b_.tuple.$factory([js_exc.message])
+arg.__traceback__=arg.__traceback__ ?? traceback.$factory(arg)
+arg.__context__=active_exc===undefined ? _b_.None :active_exc
+arg.__cause__=cause_of(cause)
+arg.suppress_context=cause !==undefined
+python_exceptions.set(js_exc,arg)
+throw js_exc}else{
 $B.RAISE(_b_.TypeError,"exceptions must derive from BaseException")}}}
 $B.print_stack=function(frame_obj){
 var stack=make_frames_stack(frame_obj ||$B.frame_obj)
@@ -6385,9 +6401,12 @@ var js_class=$B.js_class_of(exc_class)
 if(js_class !==undefined){var held=exc.$js_exc
 if(held !==null && typeof held=='object' && held instanceof js_class){return true}
 continue}
-if(_b_.issubclass(this_exc_class,exc_class)){return true}}
+if(_b_.issubclass(this_exc_class,exc_class)){return true}
+if(exc.$js_exc !==undefined && this_exc_class !==_b_.JavascriptError &&
+_b_.issubclass(_b_.JavascriptError,exc_class)){return true}}
 return false}
 $B.js_class_of=function(cls){if(cls?.ob_type===$B.JSClass){return cls.tp_bases.length==0 ? cls.js_class :undefined}
+if(cls?.ob_type===$B.JSConstructor){return $B.js_subclass(cls)}
 if(typeof cls=='function' && cls.ob_type===undefined){var func=cls.$js_func ?? cls
 return typeof func.prototype=='object' ? func :undefined}
 return undefined}
@@ -13060,16 +13079,24 @@ $B.JSClass.tp_methods=["__instancecheck__","__subclasscheck__"]
 $B.is_js_class=function(func){return typeof func=='function' &&
 /^class[\s{]/.test(Function.prototype.toString.call(func))}
 var NATIVE=/\[native code\]\s*\}$/
+var NEEDS_NEW=/without\s(?:'new'|\|new\||new\sis\s)|requires\s'new'|'new'\sis\srequired|with\s'new'|the\s'new'\soperator/
+var is_constructor=function(func){try{
+new(new Proxy(func,{construct(){return{}}}))
+return true}catch(err){return false}}
 $B.js_constructs=function(func){var proto=Object.getOwnPropertyDescriptor(func,'prototype')?.value
 if(typeof proto !='object' ||proto===null){return false}
 var source=Function.prototype.toString.call(func)
-return ! NATIVE.test(source)&&(source.startsWith('class')||
-Reflect.ownKeys(proto).some(key=> key !=='constructor'))}
+if(NATIVE.test(source)){return false}
+if(source.startsWith('class')||
+Reflect.ownKeys(proto).some(key=> key !=='constructor')){return true}
+var base=Object.getPrototypeOf(proto)
+return base !==null && Object.getPrototypeOf(base)!==null &&
+is_constructor(func)}
 $B.js_call=function(func,self,args){if($B.js_constructs(func)){return Reflect.construct(func,args)}
 try{
-return Reflect.apply(func,self,args)}catch(err){var source=Function.prototype.toString.call(func)
-if(err instanceof TypeError &&/\bnew\b/.test(err.message)&&
-(NATIVE.test(source)||source.startsWith('class'))){return Reflect.construct(func,args)}
+return Reflect.apply(func,self,args)}catch(err){if(err instanceof TypeError && NEEDS_NEW.test(err.message)&&
+NATIVE.test(Function.prototype.toString.call(func))&&
+is_constructor(func)){return Reflect.construct(func,args)}
 throw err}}
 function jsclass2pyclass(js_class){
 var known=JS_CLASSES.get(js_class)
@@ -13093,6 +13120,9 @@ $B.set_to_dict(cls,'__getattr__',function(self,attr){return jsobj2pyobj(self.jso
 $B.make_getattr(cls)
 $B.set_to_dict(cls,'__setattr__',function(self,attr,value){self.jsobj[attr]=pyobj2jsobj(value)}
 )
+if(js_class===Error ||js_class.prototype instanceof Error){
+$B.set_to_dict(cls,'__str__',function(self){return String(self.jsobj.message)}
+)}
 $B.make_new(cls)
 $B.make_init(cls)
 $B.make_setattr(cls)
@@ -13179,7 +13209,7 @@ self[attr]=$B.pyobj2jsobj(value)
 return _b_.None}
 $B.JSObj.mp_subscript=function(_self,key){if(typeof key=="string"){var res=$B.JSObj.tp_getattro(_self,key)
 if(res===$B.NULL){$B.RAISE(_b_.KeyError,key)}
-return res}else if(typeof key=="number"){if(_self[key]!==undefined){return jsobj2pyobj(_self[key])}
+return res}else if(typeof key=="number" ||typeof key=="symbol"){if(_self[key]!==undefined){return jsobj2pyobj(_self[key])}
 if(typeof _self.length=='number'){if((typeof key=="number" ||typeof key=="boolean")&&
 typeof _self.item=='function'){var rank=$B.int_value(key)
 if(rank < 0){rank+=_self.length}
@@ -13448,8 +13478,11 @@ for(var item of _b_.dict.$iter_items(cl_dict)){new_js_class[item.key]=item.value
 return new_js_class}
 $B.set_func_names($B.JSMeta,"builtins")
 $B.JSConstructor=$B.make_builtin_class('JavascriptConstructor',[_b_.type])
-$B.JSConstructor.tp_call=function(self,...args){var js_constr=self.tp_bases[0][$B.JSOBJ]
-return jsobj2pyobj(new js_constr(...args))}
+$B.js_subclass=function(cls){if(! Object.hasOwn(cls,'$js_class')){var base=cls.tp_bases[0][$B.JSOBJ]
+cls.$js_class=class extends base{}
+Object.defineProperty(cls.$js_class,'name',{value:cls.tp_name})}
+return cls.$js_class}
+$B.JSConstructor.tp_call=function(self,...args){return jsobj2pyobj(new($B.js_subclass(self))(...args))}
 $B.JSFunction=$B.make_builtin_class('JavascriptFunction')
 $B.JSFunction.tp_getattro=function(self,attr){if(attr==='__name__' ||attr==='__qualname__'){
 var jsf=self[JSOBJ]||self
@@ -17659,13 +17692,15 @@ if(func_scope.positions){js+=prefix+`frame.positions = [${func_scope.positions}]
 if(func_scope.needs_stack_length){js+=prefix+`var stack_length = $B.count_frames()\n`}
 if(func_scope.needs_frames ||is_async){js+=prefix+`var _frame_obj = $B.frame_obj\n`}
 if(is_async){js+=prefix+'frame.$async = true\n'}
-if(is_generator){js+=prefix+`locals.$is_generator = true\n`
+if(is_generator){
+js+=prefix+`frame.$js_this = $B.js_this = this\n`
+js+=prefix+`locals.$is_generator = true\n`
 if(is_async){js+=prefix+`var gen_${id} = async function*(){\n`}else{
 js+=prefix+`var gen_${id} = function*(){\n`}
 indent()}
 js+=prefix+`try {\n`
 indent()
-js+=prefix+`frame.$js_this = $B.js_this = this\n`
+if(! is_generator){js+=prefix+`frame.$js_this = $B.js_this = this\n`}
 if(in_class){
 var ix=scopes.indexOf(class_scope),parent=scopes[ix-1]
 var scope_ref=make_scope_name(scopes,parent),class_ref=class_scope.name,
