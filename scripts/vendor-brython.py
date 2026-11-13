@@ -158,5 +158,10 @@ write(os.path.join(ROOT, 'brython_runtime.js'), ours(runtime))
 # no edit at all, since none of the three has anything to do with these modules.
 write(os.path.join(ROOT, 'brython_compiler.js'), chain(full))
 
+# The names of Unicode characters a \N{...} escape is read by, which a page
+# fetches beside brython.js and a compiler under Node reads off the package.
+with open(os.path.join(src_dir, 'unicode.txt'), encoding='utf-8') as names:
+    write(os.path.join(ROOT, 'unicode.txt'), names.read())
+
 print(f'{"cut":34} {len(full) - len(runtime):>9} bytes '
       f'({100 * (len(full) - len(runtime)) / len(full):.1f} %)')

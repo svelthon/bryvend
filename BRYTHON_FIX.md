@@ -1,17 +1,22 @@
 # Patches applied to the vendored Brython
 
 `brython_runtime.js` and `brython_compiler.js` are cut from one bundle, built
-from Brython's master of 11 September 2026 plus two hundred and thirty-six proposed commits
-(`metaclass-getattribute-args`, `iterator-setstate` and `getitem-binding` in two, as amended for their PRs) and nine merged
-upstream since (#3022, #2996, #2989, #2982, #3125, #3047, #3119, #3072, and master's `3afab4451`), with **five** edits
-made in the file itself afterwards. The wrapper, the integer format and the
-`__call__` binding carry a `/* BRYVEND patch, see BRYTHON_FIX.md */` comment,
-the only way to find them again in 1.4 MB; `@vite-ignore` *is* a comment, so
-it finds itself, and the CommonJS export is a line that is no longer there.
+from Brython's master of 11 September 2026 plus two hundred and fifty-nine proposed commits
+(`metaclass-getattribute-args`, `iterator-setstate` and `getitem-binding` in two, as amended for their PRs), nine merged
+upstream since (#3022, #2996, #2989, #2982, #3125, #3047, #3119, #3072, and master's `3afab4451`), and a hundred and
+three of mine merged upstream between 12 September and 14 October that the bundle had missed, carried as master holds
+them: the modulo and the floor division of a float, the concatenation and the slice of a list or tuple subclass, an
+`__index__` as a subscript, `None` and the order of a union, `delattr` answering `None`, the sign and the padding of an
+integer format, a `__call__` that is a descriptor, the arguments of the `Unicode*Error`s, a named escape in an f-string,
+the docstrings of the builtins, and the like. Two of that span are left out, which master carries along with later
+changes of its own: the module prefix of a `GenericAlias`'s repr and an explicit `__module__` kept in a class body, each
+of which failed a test of the suite here. With **three** edits made in the file itself afterwards: the wrapper carries a
+`/* BRYVEND patch, see BRYTHON_FIX.md */` comment, the only way to find it again in 1.4 MB; `@vite-ignore` *is* a
+comment, so it finds itself, and the CommonJS export is a line that is no longer there. The integer format and the
+`__call__` binding, two edits of the built file until now, are master's commits of the span above.
 
-**The integer format and the `__call__` binding are edited in the built file
-only**, not in `vendor-base`, so a re-vendoring drops them: re-apply them by
-hand after it.
+`unicode.txt` ships beside the bundles, as it is in Brython's `www/src`: the names of Unicode characters a `\N{BULLET}`
+escape is read by, which a page fetches beside brython.js and a compiler under Node reads off the package.
 
 The commits are Brython's own, proposed upstream and carried here while they
 wait, which is what this project has always done rather than hold a fix back.
@@ -24,7 +29,7 @@ written against:
 | `none-is-undefined` | `None` and JavaScript's `undefined` become one value seen from two sides, in both directions. `javascript.UNDEFINED` becomes `None`, `null` and `javascript.NULL` are untouched, and `js_array.tp_repr` converts its elements the way the iterator already did |
 | `undefined-str-slot` | `UndefinedType` gains the `tp_str` it lacked, so `str()` of a raw JavaScript `undefined` answers instead of raising about a descriptor with no argument |
 | `json-big-integers` | `javascript.JSON` reads and writes an integer past 2^53 with its exact digits, the way the `json` module already did. `stringify` no longer raises on a big integer and `parse` no longer hands back an `int` whose last digits are wrong. Both steps compose with an author's replacer or reviver, and both are skipped where the engine lacks `JSON.rawJSON` or the reviver's source text. `from_json` is this `parse` |
-| `jsobj2pyobj-exponential` | a whole Javascript number above 2^53 crosses to Python as the int it is. It was built from the number's shortest decimal, which is another integer above 2^53 and exponential notation from 1e21 up, where `BigInt()` refused it outright. `to_py` reaches this on any large number coming back from JavaScript |
+| `jsobj2pyobj-exponential` | a whole Javascript number above 2^53 crosses to Python as the int it is. It was built from the number's shortest decimal, which is another integer above 2^53 and exponential notation from 1e21 up, where `BigInt()` refused it outright. `to_py` reaches this on any large number coming back from JavaScript. Since `js-large-number-float` below, such a number is the float it is |
 | `mark-compiler-chain` | two comments around the parsing chain in the generated `brython.js`, which is what the vendoring cuts on to build `brython_runtime.js` |
 | `fstring-format-spec-quote` | a quote used as the **fill character** of a format specification is escaped before being pasted into the generated literal. `f"{3:'>5}"` emitted `$B.String(''>5')`, and the generated JavaScript stopped parsing — *missing ) after argument list* — on an expression CPython prints as `''''3`. A string constant reaches the emitter escaped when it came from a source literal and raw when it came from a specification, so the escape is applied only to a quote that has an even number of backslashes before it |
 | `ob-type-name` | a dict key, a module global, an attribute or a local spelled `ob_type` is the author's. A dict keeps its class under a symbol and its string keys as properties, so the key shadowed the field `get_class` reads first: `globals()` raised a JavaScript error once a module bound `ob_type`, and `d["ob_type"] = "business"` left the dictionary answering a string for its own class. `get_class` takes the symbol first when the object holds it itself, so a dict's `ob_type` is data whatever it holds, a class included. A method's frame held its class under the same field for `super()` without arguments, which now reads it from `__class__`, written beside it already, so `locals()`, `vars()` and `dir()` in a method list the method's names and `locals()` has no name to leave out. It replaces the second commit `dict-proto-key` had, which sent the key to the hash table: dicts worked, and an attribute of that name, read through the own-property path, was lost |
@@ -64,6 +69,27 @@ written against:
 | `js-symbol-key` | a JavaScript object is read by a symbol key, `o[js.Symbol.for("s")]`, as JavaScript reads it, where it raised `KeyError` |
 | `js-large-number-float` | a JavaScript number past 2 ** 53, `1e21`, `Number.MAX_VALUE`, a large identifier, is the double it is, a `float`, as CPython reads that double, and goes back to JavaScript a number: it was an `int` that went back a `BigInt`, which arithmetic and `JSON.stringify` refuse, so a `load` handing it on answered 500; `javascript.JSON.parse` reads `1e21` so too, and an integer written in full past 2 ** 53 stays the exact `int` |
 | `js-typed-array-index` | a typed array is indexed as a sequence: `u[-1]` from its end and `u[3]` past it `IndexError`, where both raised `KeyError`, a slice `u[0:2]` is a typed array of its kind, and `u[-1] = 7` writes its last item |
+| `float-format-spec` | the `n` type is `d` for an int and `g` for a float, which the C locale does not group, where `f"{1000000:n}"` raised *s is not iterable*; a precision of 0 is one significant digit for `g`, `f"{12.5:.0g}"` is `1e+01`; `inf` and `nan` are in capitals for the capital types only, `f"{inf:>6}"` is `   inf`; and at a precision of 0 the alternate form keeps its point, `0.`, and `%` its sign, `25%` |
+| `printf-string-precision` | the precision of `%s`, `%r` and `%a` is the most characters they keep: `'%.2s' % 'xyz'` is `xy`, where it was `xyz` |
+| `format-field-numbering` | a format string that numbers its fields both automatically and manually, `'{0} {}'.format(1, 2)`, raises CPython's `ValueError`, where it read `'1 1'` |
+| `int-negative-shift` | a negative shift count raises *negative shift count*, where `1 << -1` was `0` and `1 >> -1` was `2` |
+| `index-protocol-str-bytes` | an object with `__index__` is an index of a str or bytes, a size for `bytes()` and a width for `center`, `ljust`, `rjust` and `zfill`, as a list takes it: `'abc'[Idx(1)]` raised `TypeError` and `'abc'.center(Idx(5))` gave `'abc'` |
+| `list-copy-union-subclass` | `copy()` of a list subclass is a list, as its slice is, and `issubclass(bool, int \| str)` reads the union as `isinstance` does, where it was `False` |
+| `generator-protocol` | a generator follows CPython's protocol: a value sent before the first `next()` is refused, a `StopIteration` out of its body, from a function it calls, is a `RuntimeError` (PEP 479), where it ended the caller's loop in silence, `close()` returns `None`, ends a generator not started, refuses one that yields in answer and lets another exception go on, and `gi_frame` is `None` once it is finished; `itertools.groupby`, written in Python here, ends its groups on its iterator's `StopIteration` accordingly (in two commits here) |
+| `str-repr-nonprintable` | `repr()` escapes every character `str.isprintable` refuses, a line separator, a soft hyphen or a zero width space among them, and `ascii()` escapes a character past U+FFFF as one `\U` escape, where it wrote two halves |
+| `codec-error-handlers` | encoding to ascii or latin-1 follows its error handler, `replace`, `ignore`, `xmlcharrefreplace`, `backslashreplace` or `surrogateescape`, and raises CPython's `UnicodeEncodeError` with its five arguments, where the one-argument call raised *function takes exactly 5 arguments*; and decoding UTF-8 takes `replace` |
+| `getattribute-method-call` | a method call, `obj.method()`, goes through the `__getattribute__` a class defines, which the engine's shortcut for calls skipped, so it sees the read and may replace the method |
+| `assign-value-first` | an assignment to a subscript or an attribute evaluates its value before the target's object and subscript, as CPython does, where `d[k()] = v()` called `k` first |
+| `object-repr-address` | the default repr of an instance names its identity, `<__main__.A object at 0x…>`, as CPython writes its address |
+| `float-unicode-digits` | `float()` reads every decimal digit of Unicode, `float('１.５')`, as `int()` does, where only arabic-indic ones were |
+| `builtin-argument-errors` | `min()`, `max()` and `next()` with no argument, a `sep` or an `end` of `print()` that is no str, and an encoding or errors of `encode()` that is no str raise CPython's `TypeError`, where the engine raised a JavaScript error or let them pass |
+| `dict-str-subclass-key` | a str key finds the equal key of a str subclass, which a dict holds in its table only: `{St('k'): 1}['k']` raised `KeyError` |
+| `except-name-shadowed-local` | the name of an `except … as` clause is unbound after the handler for the reads that follow, a local bound before the `try` statement included, which were compiled as bound and read `undefined` |
+| `engine-quiet-errors` | the `TypeError` of `str.join` and of `str()` prints nothing on the console, where it printed its arguments and a stack, 55 lines for `",".join([1, 2])` |
+| `unicode-names-unreadable` | where the names of Unicode characters cannot be read, under Node with no table for instance, a `\N{…}` escape is refused at its line, in a string as in an f-string, where `XMLHttpRequest` was missing and a `ReferenceError` stopped the compile; and a bytes literal, which has no such escape, keeps its `\N` as written, as CPython does, where it was refused as a character past ASCII (in two commits here) |
+| `json-float-literal` | `javascript.JSON.parse` reads a number written with a point or an exponent as a float, as `json.loads` does: `1.0` became the int `1` |
+| `sequence-index-error-name` | the `TypeError` of a list or tuple subscript that is no index names `list` or `tuple`, as CPython does, not the subclass, `MyList indices must be integers`, the message master's commit for `__index__` subscripts wrote |
+| `ajax-send-none` | `send(None)` of an ajax request sends no body, as `send()` does, so `urllib.request.urlopen(url)`, which hands its data, `None`, works again: it raised *send() argument must be string or dictionary* |
 | `js-class-unspaced` | a JavaScript class is one however its source is written, `class{` as a minifier writes an anonymous one, or with a line break, where only `class ` followed by a space was: the class was taken for a function, called without `new`, and its anonymous `__name__` raised `AttributeError` |
 | `js-function-unmarked` | a JavaScript function read off an object has nothing written on it: the engine set `$js_func` on it at each read, an enumerable key `Object.keys` returned, on `JSON.stringify`, `Array.prototype.push` as on a library's own functions, and a frozen one, or one behind a proxy that refuses writes, raised *Cannot add property $js_func* instead of running |
 | `proxy-engine-names` | a JavaScript proxy that answers any property, as SvelteKit's form fields do, is compared, hashed and found in a list as the object it is: the engine read its own names off it, `ob_type.tp_flags`, `valueOf` and `__hashvalue__`, and got another proxy, which raised *Cannot convert object to primitive value* or *x.valueOf is not a function*. A JavaScript object's hash is kept in a `WeakMap`, where `__hashvalue__` was written on the object |

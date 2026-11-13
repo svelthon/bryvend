@@ -13,11 +13,13 @@
   "exports": {
     ".": "./start/engine.js",
     "./compiler": "./brython_compiler.js",
+    "./unicode.txt": "./unicode.txt",
     "./package.json": "./package.json"
   },
   "files": [
     "brython_runtime.js",
     "brython_compiler.js",
+    "unicode.txt",
     "start",
     "BRYTHON_FIX.md"
   ],

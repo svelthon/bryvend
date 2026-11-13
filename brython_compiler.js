@@ -1484,6 +1484,19 @@ pos++}}
 return bytes}
 function string_error(p,token,msg){$B.helper_functions.RAISE_SYNTAX_ERROR_KNOWN_LOCATION(p,token,msg)}
 function SurrogatePair(value){this.value=value}
+$B.unicode_names_unread="(unicode error) the names of Unicode characters "+
+"could not be read here: write the character itself"
+$B.unicode_name_to_cp=function(name){
+if($B.unicodedb===undefined){if(typeof XMLHttpRequest=='undefined'){
+return undefined}
+var xhr=new XMLHttpRequest
+xhr.open("GET",$B.brython_path+"unicode.txt",false)
+xhr.onreadystatechange=function(){if(this.readyState==4){if(this.status==200){$B.unicodedb=this.responseText}else{
+console.log("Warning - could not load unicode.txt")}}}
+xhr.send()
+if($B.unicodedb===undefined){return undefined}}
+var re=new RegExp("^([0-9A-F]+);"+name.toUpperCase()+";.*$","m"),search=re.exec($B.unicodedb)
+return search===null ? null :parseInt(search[1],16)}
 function test_escape(p,token,context,text,string_start,antislash_pos){
 var seq_end,mo
 mo=/^[0-7]{1,3}/.exec(text.substr(antislash_pos+1))
@@ -1562,29 +1575,19 @@ zone+='\\\\'
 end++}
 escaped=true}else{
 if(src.charAt(end+1)=='\n'){
-end+=2}else if(src.substr(end+1,2)=='N{'){
+end+=2}else if(! bytes && src.substr(end+1,2)=='N{'){
 var end_lit=end+3,re=new RegExp("[-a-zA-Z0-9 ]+"),search=re.exec(src.substr(end_lit))
 if(search===null){string_error(p,token,"(unicode error) "+
 "malformed \\N character escape",pos)}
 var end_lit=end_lit+search[0].length
 if(src.charAt(end_lit)!="}"){string_error(p,token,"(unicode error) "+
 "malformed \\N character escape")}
-var description=search[0].toUpperCase()
-if($B.unicodedb===undefined){var xhr=new XMLHttpRequest
-xhr.open("GET",$B.brython_path+"unicode.txt",false)
-xhr.onreadystatechange=function(){if(this.readyState==4){if(this.status==200){$B.unicodedb=this.responseText}else{
-console.log("Warning - could not "+
-"load unicode.txt")}}}
-xhr.send()}
-if($B.unicodedb !==undefined){var re=new RegExp("^([0-9A-F]+);"+
-description+";.*$","m")
-search=re.exec($B.unicodedb)
-if(search===null){string_error(p,token,"(unicode error) "+
-"unknown Unicode character name")}
-var cp=parseInt(search[1],16)
+var cp=$B.unicode_name_to_cp(search[0])
+if(cp===null){string_error(p,token,"(unicode error) "+
+"unknown Unicode character name")}else if(cp===undefined){
+string_error(p,token,$B.unicode_names_unread)}else{
 zone+=String.fromCodePoint(cp)
-end=end_lit+1}else{
-end++}}else{
+end=end_lit+1}}else{
 var esc=test_escape(p,token,context,src,string_start,end)
 if(esc){if(esc[0]=='\\'){zone+='\\\\'}else if(esc[0]instanceof SurrogatePair){zone+=String.fromCodePoint(esc[0].value)}else{
 zone+=esc[0]}
