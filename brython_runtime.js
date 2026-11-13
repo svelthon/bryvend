@@ -6153,6 +6153,10 @@ function cause_of(cause){if(cause===undefined ||cause===_b_.None){return _b_.Non
 if(cause !==null && typeof cause=='object' && foreign(cause)){return $B.exception(cause)}
 if($B.$isinstance(cause,_b_.BaseException)){return cause}
 if($B.is_type(cause)&& _b_.issubclass(cause,_b_.BaseException)){return $B.$call(cause)}
+var js_class=cause?.ob_type===$B.JSClass && cause.tp_bases.length==0 ?
+cause.js_class :typeof cause=='function' && foreign(cause)?
+cause.$js_func ?? cause :undefined
+if(js_class===Error ||js_class?.prototype instanceof Error){return $B.exception(new js_class())}
 $B.RAISE(_b_.TypeError,"exception causes must derive from BaseException")}
 var python_exceptions=new WeakMap()
 $B.known_exception=function(js_exc){return python_exceptions.get(js_exc)}
@@ -6361,11 +6365,21 @@ return Object.prototype.toString.call(value)}}
 $B.is_exc=function(exc,exc_list){
 if(foreign(exc)){exc=$B.exception(exc)}
 if(! Array.isArray(exc_list)){exc_list=[exc_list]}
+var flat=list=> list.flatMap(one=> Array.isArray(one)? flat(one):[one])
+exc_list=flat(exc_list)
 var this_exc_class=$B.is_type(exc)? exc :$B.get_class(exc)
 for(var i=0;i < exc_list.length;i++){var exc_class=exc_list[i]
 if(this_exc_class===undefined){console.log("exc class undefined",exc)}
+var js_class=$B.js_class_of(exc_class)
+if(js_class !==undefined){var held=exc.$js_exc
+if(held !==null && typeof held=='object' && held instanceof js_class){return true}
+continue}
 if(_b_.issubclass(this_exc_class,exc_class)){return true}}
 return false}
+$B.js_class_of=function(cls){if(cls?.ob_type===$B.JSClass){return cls.tp_bases.length==0 ? cls.js_class :undefined}
+if(typeof cls=='function' && cls.ob_type===undefined){var func=cls.$js_func ?? cls
+return typeof func.prototype=='object' ? func :undefined}
+return undefined}
 $B.is_recursion_error=function(js_exc){
 var msg=js_exc+"",parts=msg.split(":")
 if(parts.length==1){return false}
@@ -13025,8 +13039,9 @@ return kls}
 const JS_CLASSES=new WeakMap()
 function made_of_js(cls){return cls?.ob_type===$B.JSClass && cls.tp_bases.length==0}
 var JSClass_funcs=$B.JSClass.tp_funcs={}
-JSClass_funcs.__instancecheck__=function(cls,instance){if(made_of_js(cls)&& instance !==null && typeof instance=='object' &&
-instance.ob_type===undefined){return instance instanceof cls.js_class}
+JSClass_funcs.__instancecheck__=function(cls,instance){if(made_of_js(cls)&& instance !==null && typeof instance=='object'){if(instance.ob_type===undefined){return instance instanceof cls.js_class}
+var held=instance.$js_exc ?? instance
+if(held instanceof cls.js_class){return true}}
 return _b_.type.tp_funcs.__instancecheck__(cls,instance)}
 JSClass_funcs.__subclasscheck__=function(cls,subclass){if(made_of_js(cls)&& made_of_js(subclass)){return subclass.js_class===cls.js_class ||
 subclass.js_class.prototype instanceof cls.js_class}
@@ -13065,31 +13080,7 @@ return cls}
 var js_iterator=$B.make_builtin_class('js_iterator')
 js_iterator.tp_iternext=function*(self){for(var key of self.it){yield key}}
 $B.set_func_names(js_iterator,'builtins')
-function dict_to_js(d){var res={},memo=new Map([[d,res]])
-for(var entry of _b_.dict.$iter_items(d)){if(typeof entry.key !=='string'){return $B.NULL}
-res[entry.key]=pyobj2jsobj(entry.value,memo)}
-return res}
-function JSObj_eq(self,other){if(typeof self !=='object'){return false}
-if($B.is_dict(self)){self=dict_to_js(self)
-if(self===$B.NULL){return false}}
-if($B.is_dict(other)){other=dict_to_js(other)
-if(other===$B.NULL){return false}}
-if(Object.keys(self).length !==Object.keys(other).length){return false}
-for(var key in self){if(! Object.hasOwn(other,key)||other[key]!==self[key]){return false}}
-return true
-switch(typeof self){case "string":
-return self==other
-case "object":
-if(self.__eq__ !==undefined){return self.__eq__(other)}
-if(Object.keys(self).length !==Object.keys(other).length){return false}
-if(self===other){return true}
-for(var key in self){if(! $B.rich_comp('__eq__',self[key],other[key])){return false}}
-return true
-case 'function':
-if(self.$js_func && other.$js_func){return self.$js_func===other.$js_func}
-return self===other
-default:
-return self===other}}
+function JSObj_eq(self,other){return self===other ? true :_b_.NotImplemented}
 $B.JSObj=$B.make_builtin_class("JSObject")
 $B.JSObj.$factory=jsobj2pyobj
 $B.JSObj.nb_bool=function(self){if(typeof self=='object'){for(var key in self){return true}
