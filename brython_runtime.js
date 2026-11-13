@@ -5169,6 +5169,10 @@ if(msg==ps1 ||msg==ps2){console.log(msg,res)}}
 return res}
 _b_.isinstance=function(obj,cls){check_nb_args_no_kw('isinstance',2,arguments)
 return $B.$isinstance(obj,cls)}
+function js_constructor(cls){if(typeof cls !='function' ||cls.ob_type !==undefined){return undefined}
+var func=cls.$js_func ?? cls
+return typeof func.prototype=='object' && func.prototype !==null ?
+func :undefined}
 $B.$isinstance=function(obj,cls){var kls
 if(Array.isArray(cls)){
 if(cls.ob_type !==undefined && ! $B.is_tuple(cls)){$B.RAISE(_b_.TypeError,"isinstance() arg 2 must be a type, "+
@@ -5180,10 +5184,10 @@ if(klass===$B.UnionType){for(kls of cls.args){if($B.$isinstance(obj,kls)){return
 return false}
 if(klass===$B.GenericAlias){
 $B.RAISE(_b_.TypeError,'isinstance() arg 2 cannot be a parameterized generic')}
-if(typeof cls=='function' && cls.ob_type===undefined){var func=cls.$js_func ?? cls
-if(typeof func.prototype=='object' && func.prototype !==null){if(obj===null ||typeof obj !='object'){return false}
+var func=js_constructor(cls)
+if(func !==undefined){if(obj===null ||typeof obj !='object'){return false}
 var held=obj.ob_type===undefined ? obj :obj.$js_exc ?? obj
-return held instanceof func}}
+return held instanceof func}
 if(! cls.tp_bases){$B.RAISE(_b_.TypeError,"isinstance() arg 2 must be a type, "+
 "a tuple of types, or a union"
 )}
@@ -5203,6 +5207,8 @@ let _class
 if($B.is_tuple(class_or_tuple)){for(_class of class_or_tuple){if(issubclass(cls,_class)){return true}}
 return false}
 _class=class_or_tuple 
+var js_sub=js_constructor(cls),js_base=js_constructor(_class)
+if(js_sub !==undefined && js_base !==undefined){return js_sub===js_base ||js_sub.prototype instanceof js_base}
 if(! $B.is_type(cls)){$B.RAISE(_b_.TypeError,"issubclass() arg 1 must be a class")}
 let class_type=$B.get_class(_class)
 if(class_type===$B.GenericAlias){$B.RAISE(_b_.TypeError,'issubclass() arg 2 cannot be a parameterized generic')}
@@ -5271,7 +5277,8 @@ var method=$B.search_in_mro(klass,'__len__',null)
 if(method===null){$B.RAISE(_b_.TypeError,"object of type '"+
 $B.class_name(obj)+"' has no len()")}
 let res=$B.$call(method,obj)
-if(res===undefined){console.log('call',method,'with obj',obj,'returns undef')}
+if(res===undefined){$B.RAISE(_b_.TypeError,"object of type '"+
+$B.class_name(obj)+"' has no len()")}
 if(!$B.is_int(res)){$B.RAISE(_b_.TypeError,`'${$B.class_name(res)}' object cannot be interpreted as an integer`
 )}
 if(!$B.rich_comp('__ge__',res,0)){$B.RAISE(_b_.ValueError,'ValueError: __len__() should return >= 0')}
@@ -12902,8 +12909,7 @@ if(arg !==null && arg.constructor===Object && arg[$B.KW]){$B.RAISE(_b_.TypeError
 'Javascript functions')}
 args[i]=pyobj2jsobj(arg,memo)}
 try{
-return jsobj2pyobj($B.js_constructs(jsobj)? new jsobj(...args):
-jsobj.apply(_this,args))}catch(err){throw $B.exception(err)}}
+return jsobj2pyobj($B.js_call(jsobj,_this,args))}catch(err){throw $B.exception(err)}}
 made?.set(jsobj,res)
 res[JSOBJ]=jsobj
 Object.defineProperty(res,'$js_func',{value:jsobj})
@@ -12969,7 +12975,7 @@ return pyobj}
 let methods=klass===$B.method ? bound_methods(pyobj.im_self):undefined
 if(methods !==undefined && methods.has(pyobj.im_func)){return methods.get(pyobj.im_func)}
 if(pyobj.$is_async){
-let jsobj=function(){var res=pyobj.apply(null,arguments)
+let jsobj=function(){var res=pyobj.apply(this,arguments)
 return $B.coroutine.tp_funcs.send(res)}
 pyobj[JSOBJ]=jsobj
 PYOBJ_MAP.set(jsobj,pyobj)
@@ -13053,12 +13059,18 @@ return _b_.type.tp_funcs.__subclasscheck__(cls,subclass)}
 $B.JSClass.tp_methods=["__instancecheck__","__subclasscheck__"]
 $B.is_js_class=function(func){return typeof func=='function' &&
 /^class[\s{]/.test(Function.prototype.toString.call(func))}
-var CALLABLE_NATIVES=new Set([Object,Function,Array,Number,Boolean,String,Symbol,BigInt,Date,RegExp,Error,EvalError,RangeError,ReferenceError,SyntaxError,TypeError,URIError,globalThis.AggregateError])
-$B.js_constructs=function(func){if(typeof func !='function' ||CALLABLE_NATIVES.has(func)){return false}
-if(func===globalThis.Proxy){return true}
-var proto=Object.getOwnPropertyDescriptor(func,'prototype')?.value
-return typeof proto=='object' && proto !==null &&
-/\[native code\]\s*\}$/.test(Function.prototype.toString.call(func))}
+var NATIVE=/\[native code\]\s*\}$/
+$B.js_constructs=function(func){var proto=Object.getOwnPropertyDescriptor(func,'prototype')?.value
+if(typeof proto !='object' ||proto===null){return false}
+var source=Function.prototype.toString.call(func)
+return ! NATIVE.test(source)&&(source.startsWith('class')||
+Reflect.ownKeys(proto).some(key=> key !=='constructor'))}
+$B.js_call=function(func,self,args){if($B.js_constructs(func)){return Reflect.construct(func,args)}
+try{
+return Reflect.apply(func,self,args)}catch(err){var source=Function.prototype.toString.call(func)
+if(err instanceof TypeError &&/\bnew\b/.test(err.message)&&
+(NATIVE.test(source)||source.startsWith('class'))){return Reflect.construct(func,args)}
+throw err}}
 function jsclass2pyclass(js_class){
 var known=JS_CLASSES.get(js_class)
 if(known !==undefined){return known}
@@ -13093,8 +13105,10 @@ $B.set_func_names(js_iterator,'builtins')
 function JSObj_eq(self,other){return self===other ? true :_b_.NotImplemented}
 $B.JSObj=$B.make_builtin_class("JSObject")
 $B.JSObj.$factory=jsobj2pyobj
-$B.JSObj.nb_bool=function(self){if(typeof self=='object'){for(var key in self){return true}
-return false}
+$B.JSObj.nb_bool=function(self){if(typeof self=='object'){if(Array.isArray(self)){return self.length > 0}
+var proto=Object.getPrototypeOf(self)
+return proto===Object.prototype ||proto===null ?
+Object.keys(self).length > 0 :true}
 return !! self}
 $B.JSObj.sq_contains=function(self,key){return key in self}
 $B.JSObj.tp_richcompare=function(self,other,op){switch(op){case '__eq__':
@@ -14448,7 +14462,7 @@ $B.RAISE(_b_.TypeError,msg)}
 if(self.$sent){$B.RAISE(_b_.RuntimeError,"cannot reuse already awaited coroutine")}
 self.$sent=true
 unawaited.unregister(self)
-return self.$func.apply(null,self.$args)}
+return self.$func.apply(self.$this,self.$args)}
 coroutine_funcs.throw=function(self){}
 $B.coroutine.tp_methods=["send","throw","close","__sizeof__"]
 $B.coroutine.noargs_methods=["close","__sizeof__"]
@@ -14474,7 +14488,7 @@ made=[]}
 $B.make_async=func=>{
 if(func.$is_genfunc){return func}
 var f=function(){var args=arguments
-var res={ob_type:coroutine,$args:args,$func:func}
+var res={ob_type:coroutine,$args:args,$func:func,$this:this}
 if($B.frame_obj !==null){var frame=$B.frame_obj.frame
 res.$lineno=frame.$lineno
 if(made.length==0){queueMicrotask(watch_unstarted)}
@@ -15347,8 +15361,11 @@ super_class.tp_getattro=function(self,attr){if(attr=="__init__" ||attr=="__call_
 return $B.$getattr(self.__self_class__,attr,$B.NULL)}
 $B.set_func_names(super_class,"javascript")
 modules['javascript']={"this":function(){
-if($B.js_this===undefined){return $B.builtins.None}
-return $B.jsobj2pyobj($B.js_this)},Array:$B.js_array,Date:globalThis.Date,
+var js_this=$B.js_this
+for(var frame_obj=$B.frame_obj;frame_obj;frame_obj=frame_obj.prev){if(Object.hasOwn(frame_obj.frame,'$js_this')){js_this=frame_obj.frame.$js_this
+break}}
+if(js_this===undefined){return $B.builtins.None}
+return $B.jsobj2pyobj(js_this)},Array:$B.js_array,Date:globalThis.Date,
 extends:function(js_constr){if((!js_constr.$js_func)||
 ! $B.is_js_class(js_constr.$js_func)){console.log(js_constr)
 $B.RAISE(_b_.TypeError,'argument of extend must be a Javascript class')}
@@ -15695,7 +15712,8 @@ var dict=$B.get_dict(module_obj)
 $B.imported[name]=module_obj
 for(var attr in module_obj){if(module_obj[attr]===dict){continue}
 if(attr.startsWith('$')){continue}
-if(typeof module_obj[attr]=='function'){module_obj[attr].$infos={__module__:name,__name__:attr,__qualname__:name+'.'+attr}
+if(typeof module_obj[attr]=='function' &&
+module_obj[attr]!==globalThis[attr]){module_obj[attr].$infos={__module__:name,__name__:attr,__qualname__:name+'.'+attr}
 $B.set_function_infos(module_obj[attr],{__module__:name,__name__:attr,__qualname__:name+'.'+attr}
 )}
 $B.module_setattr(module_obj,attr,module_obj[attr])
@@ -17647,7 +17665,7 @@ js+=prefix+`var gen_${id} = function*(){\n`}
 indent()}
 js+=prefix+`try {\n`
 indent()
-js+=prefix+`$B.js_this = this\n`
+js+=prefix+`frame.$js_this = $B.js_this = this\n`
 if(in_class){
 var ix=scopes.indexOf(class_scope),parent=scopes[ix-1]
 var scope_ref=make_scope_name(scopes,parent),class_ref=class_scope.name,
