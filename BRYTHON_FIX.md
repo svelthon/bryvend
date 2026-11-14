@@ -1,7 +1,7 @@
 # Patches applied to the vendored Brython
 
 `brython_runtime.js` and `brython_compiler.js` are cut from one bundle, built
-from Brython's master of 11 September 2026 plus two hundred and sixty-one proposed commits
+from Brython's master of 11 September 2026 plus two hundred and sixty proposed commits
 (`metaclass-getattribute-args`, `iterator-setstate` and `getitem-binding` in two, as amended for their PRs), nine merged
 upstream since (#3022, #2996, #2989, #2982, #3125, #3047, #3119, #3072, and master's `3afab4451`), and a hundred and
 three of mine merged upstream between 12 September and 14 October that the bundle had missed, carried as master holds
@@ -67,7 +67,6 @@ written against:
 | `js-object-eq-identity` | a JavaScript object is equal to itself only, as `===` tells and as CPython compares an object with no `__eq__`, and the other value is asked in turn: a `URL`, `window` or `localStorage`, whose fields are accessors of its prototype, was not equal to itself, so `e.source != js.window` was always true; two `Map`s, two `Error`s or two promises, which have no enumerable key, were equal, so `l.remove(b)` removed `a`; and a plain object was equal to another, or to a dict, holding the same keys, a semantics of Brython's changed here (`to_dict()` compares contents) (in two commits here) |
 | `js-null-prototype` | a JavaScript object with no prototype, the `groups` of a match, the result of `Object.groupBy`, a module namespace, is named as JavaScript tags it, so `hasattr(groups, "x")` answers `False` and `except AttributeError` or `except TypeError` takes the error that names its type, where the name read `constructor.name` it does not have and raised a JavaScript error in its place |
 | `js-symbol-key` | a JavaScript object is read by a symbol key, `o[js.Symbol.for("s")]`, as JavaScript reads it, where it raised `KeyError` |
-| `js-large-number-float` | a JavaScript number past 2 ** 53, `1e21`, `Number.MAX_VALUE`, a large identifier, is the double it is, a `float`, as CPython reads that double, and goes back to JavaScript a number: it was an `int` that went back a `BigInt`, which arithmetic and `JSON.stringify` refuse, so a `load` handing it on answered 500; `javascript.JSON.parse` reads `1e21` so too, and an integer written in full past 2 ** 53 stays the exact `int` |
 | `js-typed-array-index` | a typed array is indexed as a sequence: `u[-1]` from its end and `u[3]` past it `IndexError`, where both raised `KeyError`, a slice `u[0:2]` is a typed array of its kind, and `u[-1] = 7` writes its last item |
 | `float-format-spec` | the `n` type is `d` for an int and `g` for a float, which the C locale does not group, where `f"{1000000:n}"` raised *s is not iterable*; a precision of 0 is one significant digit for `g`, `f"{12.5:.0g}"` is `1e+01`; `inf` and `nan` are in capitals for the capital types only, `f"{inf:>6}"` is `   inf`; and at a precision of 0 the alternate form keeps its point, `0.`, and `%` its sign, `25%` |
 | `printf-string-precision` | the precision of `%s`, `%r` and `%a` is the most characters they keep: `'%.2s' % 'xyz'` is `xy`, where it was `xyz` |

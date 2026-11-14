@@ -12980,7 +12980,7 @@ $B.RAISE(_b_.TypeError,`cannot send '${$B.class_name(obj)}' object`)}
 $B.structuredclone2pyobj=function(obj){if(obj===null){
 return _b_.None}else if(obj===undefined){return _b_.None}else if(typeof obj=="boolean"){return obj}else if(typeof obj=="bigint"){
 return obj}else if(typeof obj=="string" ||obj instanceof String){return $B.String(obj)}else if(typeof obj=="number" ||obj instanceof Number){obj+=0 
-return Number.isSafeInteger(obj)?
+return Number.isInteger(obj)?
 obj :
 {ob_type:_b_.float,value:obj}}else if(Array.isArray(obj)||$B.exact_type(obj,_b_.list)||
 $B.exact_type(obj,_b_.tuple)){let res=_b_.list.$factory()
@@ -13010,7 +13010,9 @@ if(jsobj===null){return null}else if(jsobj===undefined){return _b_.None}
 switch(typeof jsobj){case 'boolean':
 return jsobj
 case 'number':
-if(Number.isSafeInteger(jsobj)){return jsobj}
+if(jsobj % 1===0){if(! Number.isSafeInteger(jsobj)){
+return BigInt(jsobj)}
+return jsobj}
 return _b_.float.$factory(jsobj)
 case 'bigint':
 return jsobj
