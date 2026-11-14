@@ -832,7 +832,7 @@ while(true){if(pos >=src.length ||(ix='\r\n'.indexOf(src[pos]))>-1){if(parser &&
 if(mo){var is_type_ignore=false
 if(mo[1].startsWith('ignore')){if(mo[1].length==6){is_type_ignore=true}else{
 var char=mo[1][6]
-if(char.charCodeAt(0)<=128 &&/[a-zA-Z0-9]/.exec(char)===null){is_type_ignore=true}}}
+if(char.charCodeAt(0)<=128 && /[a-zA-Z0-9]/.exec(char)===null){is_type_ignore=true}}}
 if(is_type_ignore){t.push(Token('TYPE_IGNORE',comment,line_num,start-line_start,line_num,pos-line_start+1,line))}else{
 t.push(Token('TYPE_COMMENT',comment,line_num,start-line_start,line_num,pos-line_start+1,line))}
 return{t,pos}}}
@@ -958,7 +958,7 @@ if(cp===null ||cp===undefined){raise_error(_b_.SyntaxError,filename,line_num,pos
 ft_buffer+=String.fromCodePoint(cp)
 pos=end_name+1
 ft_escape=false
-continue}else if(char=='U' &&/^[0-9a-f]{8}$/i.test(src.substr(pos,8))){
+continue}else if(char=='U' && /^[0-9a-f]{8}$/i.test(src.substr(pos,8))){
 ft_buffer+=String.fromCodePoint(parseInt(src.substr(pos,8),16))
 pos+=8
 ft_escape=false
@@ -4835,7 +4835,7 @@ if($B.is_bytes($.source)){var encoding='utf-8',lfpos=$.source.source.indexOf(10)
 if(lfpos==-1){first_line=$.source}else{
 first_line=_b_.bytes.$factory($.source.source.slice(0,lfpos))}
 first_line=$B.bytes_decode(first_line,'latin-1')
-var encoding_re=/^[\t\f]*#.*?coding[:=][\t]*([-_.a-zA-Z0-9]+)/
+var encoding_re=/^[ \t\f]*#.*?coding[:=][ \t]*([-_.a-zA-Z0-9]+)/
 var mo=first_line.match(encoding_re)
 if(mo){encoding=mo[1]}else if(lfpos >-1){
 var rest=$.source.source.slice(lfpos+1)
@@ -9630,8 +9630,8 @@ return s+fill.repeat(missing)
 case ">":
 return fill.repeat(missing)+s
 case "=":
-var lead=s.match(fmt.alternate ?/^[+\-]?(0[xXoObB])?/:
-/^[+\-]?/)[0]
+var lead=s.match(fmt.alternate ? /^[+\- ]?(0[xXoObB])?/:
+/^[+\- ]?/)[0]
 return lead+fill.repeat(missing)+s.substr(lead.length)
 case "^":
 var left=parseInt(missing/2)
@@ -11008,6 +11008,12 @@ return format_sign(value,fmt)+
 ("EFG".includes(fmt.type ?? "-")? special.toUpperCase():special)}
 if(fmt.type=="n"){
 fmt.type="g"}
+if(fmt.sign=="+" ||fmt.sign==" "){
+let sign=fmt.sign
+fmt.sign=undefined
+let res=preformat(self,fmt)
+fmt.sign=sign
+return value < 0 ||Object.is(value,-0)? res :sign+res}
 if(fmt.precision===undefined && fmt.type !==undefined){fmt.precision=6}else if(fmt.precision==0 && "gG".includes(fmt.type ?? "-")){
 fmt.precision=1}
 if(fmt.type=="%"){value*=100}
@@ -11055,7 +11061,6 @@ if(fmt.type===undefined ||"gGn".indexOf(fmt.type)!=-1){
 if(res.search("e")==-1){while(res.charAt(res.length-1)=="0"){res=res.substr(0,res.length-1)}}
 if(res.charAt(res.length-1)=="."){if(fmt.type===undefined){res+="0"}else{
 res=res.substr(0,res.length-1)}}}
-if(fmt.sign !==undefined){if((fmt.sign==" " ||fmt.sign=="+" )&& value > 0){res=fmt.sign+res}}
 if(fmt.type=="%"){res+="%"}
 return res}
 float.$format=function(self,fmt){
@@ -11171,7 +11176,7 @@ if(! isFinite(z)){$B.RAISE(_b_.OverflowError,"rounded value too large to represe
 return fast_float(x < 0 ?-z :z)}
 function to_digits(s){
 var res=""
-for(var char of s){if(char > "\x7f" &&/\p{Nd}/u.test(char)){var cp=char.codePointAt(0)
+for(var char of s){if(char > "\x7f" && /\p{Nd}/u.test(char)){var cp=char.codePointAt(0)
 for(var start of $B.digits_starts){if(cp >=start && cp-start < 10){char=String(cp-start)
 break}}}
 res+=char}
@@ -15637,8 +15642,8 @@ UNDEFINED:_b_.None,UndefinedType:$B.UndefinedType}
 var write_big=function(value){return typeof value=='bigint' && typeof JSON.rawJSON=='function' ?
 JSON.rawJSON(value.toString()):value}
 var read_big=function(value,context){if(typeof value=='number' && context &&
-typeof context.source=='string'){if(! Number.isSafeInteger(value)&&/^-?\d+$/.test(context.source)){return BigInt(context.source)}
-if(Number.isInteger(value)&&/[.eE]/.test(context.source)){
+typeof context.source=='string'){if(! Number.isSafeInteger(value)&& /^-?\d+$/.test(context.source)){return BigInt(context.source)}
+if(Number.isInteger(value)&& /[.eE]/.test(context.source)){
 return $B.fast_float(value)}}
 return value}
 $B.assign_dict(modules.javascript.JSON,{parse:function(text,reviver){if($B.is_str(text)){text=_b_.str.$to_string(text)}

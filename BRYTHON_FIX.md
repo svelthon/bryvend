@@ -1,7 +1,7 @@
 # Patches applied to the vendored Brython
 
 `brython_runtime.js` and `brython_compiler.js` are cut from one bundle, built
-from Brython's master of 11 September 2026 plus two hundred and fifty-nine proposed commits
+from Brython's master of 11 September 2026 plus two hundred and sixty-one proposed commits
 (`metaclass-getattribute-args`, `iterator-setstate` and `getitem-binding` in two, as amended for their PRs), nine merged
 upstream since (#3022, #2996, #2989, #2982, #3125, #3047, #3119, #3072, and master's `3afab4451`), and a hundred and
 three of mine merged upstream between 12 September and 14 October that the bundle had missed, carried as master holds
@@ -89,6 +89,8 @@ written against:
 | `unicode-names-unreadable` | where the names of Unicode characters cannot be read, under Node with no table for instance, a `\N{…}` escape is refused at its line, in a string as in an f-string, where `XMLHttpRequest` was missing and a `ReferenceError` stopped the compile; and a bytes literal, which has no such escape, keeps its `\N` as written, as CPython does, where it was refused as a character past ASCII (in two commits here) |
 | `json-float-literal` | `javascript.JSON.parse` reads a number written with a point or an exponent as a float, as `json.loads` does: `1.0` became the int `1` |
 | `sequence-index-error-name` | the `TypeError` of a list or tuple subscript that is no index names `list` or `tuple`, as CPython does, not the subclass, `MyList indices must be integers`, the message master's commit for `__index__` subscripts wrote |
+| `minifier-regex-literals` | the minifier keeps the spaces of a regular expression that follows an operator, `?`, `:`, `&&`, `=`, where only one after `(` was kept: the sign's `/^[+\- ]?/` lost its space, and `format(5, " 05d")` gave `'000 5'` in this bundle, which the source does not |
+| `float-format-sign` | the `+` and space signs of a float hold for `g`, `e` and zero, `format(1.5, "+g")` is `'+1.5'` and `format(0.0, "+.1f")` `'+0.0'`, where only a positive value of the other types had them; `n`, which goes through `g`, lost its sign too |
 | `ajax-send-none` | `send(None)` of an ajax request sends no body, as `send()` does, so `urllib.request.urlopen(url)`, which hands its data, `None`, works again: it raised *send() argument must be string or dictionary* |
 | `js-class-unspaced` | a JavaScript class is one however its source is written, `class{` as a minifier writes an anonymous one, or with a line break, where only `class ` followed by a space was: the class was taken for a function, called without `new`, and its anonymous `__name__` raised `AttributeError` |
 | `js-function-unmarked` | a JavaScript function read off an object has nothing written on it: the engine set `$js_func` on it at each read, an enumerable key `Object.keys` returned, on `JSON.stringify`, `Array.prototype.push` as on a library's own functions, and a frozen one, or one behind a proxy that refuses writes, raised *Cannot add property $js_func* instead of running |
