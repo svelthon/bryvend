@@ -996,6 +996,11 @@ throw Error('wrong braces')}
 pop_braces()
 token_modes.pop()
 token_mode=$B.last(token_modes)
+continue}else if(char=='\\' && /[0-7]/.test(src[pos])){
+var octal=/^[0-7]{1,3}/.exec(src.substr(pos))[0]
+format_specifier+='\\u'+
+parseInt(octal,8).toString(16).padStart(4,'0')
+pos+=octal.length
 continue}else{
 format_specifier+=char
 continue}}
@@ -13230,6 +13235,20 @@ return Reflect.apply(func,self,args)}catch(err){if(err instanceof TypeError && N
 NATIVE.test(Function.prototype.toString.call(func))&&
 refused(err,func)&& is_constructor(func)){return Reflect.construct(func,args)}
 throw err}}
+var JS_SUBCLASSES=new WeakMap()
+function js_subclass(klass,cls){var made=JS_SUBCLASSES.get(klass)
+if(made !==undefined){return made}
+made=class extends cls.js_class{}
+Object.defineProperty(made,'name',{value:klass.tp_name})
+for(var k of klass.tp_mro){if(k===cls){break}
+for(var entry of _b_.dict.$iter_items($B.get_dict(k))){let name=entry.key
+if(typeof name !='string' ||name.startsWith('__')||
+name in made.prototype){continue}
+Object.defineProperty(made.prototype,name,{configurable:true,get(){var self=PYOBJ_MAP.get(this)
+return self===undefined ? undefined :
+pyobj2jsobj($B.$getattr(self,name))}})}}
+JS_SUBCLASSES.set(klass,made)
+return made}
 function jsclass2pyclass(js_class){
 var known=JS_CLASSES.get(js_class)
 if(known !==undefined){return known}
@@ -13250,7 +13269,7 @@ var res={ob_type:klass}
 $B.init_dict(res)
 return res}
 )
-$B.set_to_dict(cls,'__init__',function(self,...args){if(! $B.$isinstance(self,_b_.BaseException)){self.jsobj=new cls.js_class(...args)
+$B.set_to_dict(cls,'__init__',function(self,...args){if(! $B.$isinstance(self,_b_.BaseException)){self.jsobj=new(js_subclass($B.get_class(self),cls))(...args)
 self[JSOBJ]=self.jsobj
 PYOBJ_MAP.set(self.jsobj,self)
 return}
@@ -13272,7 +13291,9 @@ if(! is_error_class(js_class)){
 for(let name of['__len__','__iter__','__contains__','__getitem__','__setitem__','__delitem__']){$B.set_to_dict(cls,name,function(self,...args){var jsobj=self.jsobj,method=$B.search_in_mro($B.get_class(jsobj),name,null)
 if(method===null){throw $B.attr_error(name,self)}
 return $B.$call(method,jsobj,...args)}
-)}}
+)}
+$B.set_to_dict(cls,'__bool__',function(self){return $B.JSObj.nb_bool(self.jsobj)}
+)}
 $B.set_to_dict(cls,'__setattr__',function(self,attr,value){self.jsobj[attr]=pyobj2jsobj(value)}
 )
 if(is_error_class(js_class)){
