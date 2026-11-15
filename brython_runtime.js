@@ -13251,6 +13251,8 @@ $B.init_dict(res)
 return res}
 )
 $B.set_to_dict(cls,'__init__',function(self,...args){if(! $B.$isinstance(self,_b_.BaseException)){self.jsobj=new cls.js_class(...args)
+self[JSOBJ]=self.jsobj
+PYOBJ_MAP.set(self.jsobj,self)
 return}
 args=positional(args)
 var held=self.jsobj
@@ -13266,6 +13268,11 @@ if(jsobj===undefined ||jsobj===null ||!(attr in Object(jsobj))){throw $B.attr_er
 return jsobj2pyobj(jsobj[attr],jsobj)}
 )
 $B.make_getattr(cls)
+if(! is_error_class(js_class)){
+for(let name of['__len__','__iter__','__contains__','__getitem__','__setitem__','__delitem__']){$B.set_to_dict(cls,name,function(self,...args){var jsobj=self.jsobj,method=$B.search_in_mro($B.get_class(jsobj),name,null)
+if(method===null){throw $B.attr_error(name,self)}
+return $B.$call(method,jsobj,...args)}
+)}}
 $B.set_to_dict(cls,'__setattr__',function(self,attr,value){self.jsobj[attr]=pyobj2jsobj(value)}
 )
 if(is_error_class(js_class)){
