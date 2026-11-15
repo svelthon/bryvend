@@ -964,6 +964,12 @@ pos+=8
 ft_escape=false
 continue}else if(char=='a'){ft_buffer+='\\x07'
 ft_escape=false
+continue}else if('01234567'.includes(char)){
+var octal=/^[0-7]{1,3}/.exec(src.substr(pos-1))[0]
+ft_buffer+='\\u'+
+parseInt(octal,8).toString(16).padStart(4,'0')
+pos+=octal.length-1
+ft_escape=false
 continue}else if(! '\\\'"nrtbfv01234567xuN'.includes(char)){
 ft_buffer+='\\'}
 ft_buffer+='\\'}
