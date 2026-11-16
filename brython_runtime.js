@@ -13185,7 +13185,10 @@ if(self.js_class[attr]===undefined){return $B.NULL}
 return jsobj2pyobj(self.js_class[attr],self.js_class)}
 $B.JSClass.tp_setattro=function(self,attr,value){
 if(JS_CLASSES.get(self.js_class)!==self ||
-$B.search_in_mro(self,attr,$B.NULL)!==$B.NULL){return _b_.type.tp_setattro(self,attr,value)}
+$B.search_in_mro(self,attr,$B.NULL)!==$B.NULL){var res=_b_.type.tp_setattro(self,attr,value),made=JS_SUBCLASSES.get(self)
+if(made !==undefined){if(value !==$B.NULL){define_accessor(made,self,attr)}else if(Object.hasOwn(made.prototype,attr)&&
+! python_defines(self,self.tp_mro.find(made_of_js),attr)){delete made.prototype[attr]}}
+return res}
 if(value===$B.NULL){delete self.js_class[attr]}else{
 self.js_class[attr]=pyobj2jsobj(value)}
 return _b_.None}
@@ -13196,6 +13199,8 @@ if(is_error_class(bases[0].js_class)&&
 ! bases.some(base=> _b_.issubclass(base,_b_.BaseException))){args=[name,$B.fast_tuple([...bases,_b_.Exception]),dict]}
 var kls=_b_.type.tp_new(cls,args,kw)
 kls.js_class=kls.tp_bases[0].js_class
+if(! is_error_class(kls.js_class)){
+kls[JSOBJ]=js_subclass(kls,js_base(kls))}
 return kls}
 const JS_CLASSES=new WeakMap()
 function made_of_js(cls){return cls?.ob_type===$B.JSClass && cls.tp_bases.length==0}
@@ -13236,19 +13241,66 @@ NATIVE.test(Function.prototype.toString.call(func))&&
 refused(err,func)&& is_constructor(func)){return Reflect.construct(func,args)}
 throw err}}
 var JS_SUBCLASSES=new WeakMap()
+function js_base(klass){return klass.tp_mro.find(k=> k.js_class !==undefined && k.tp_bases.length==0)}
 function js_subclass(klass,cls){var made=JS_SUBCLASSES.get(klass)
 if(made !==undefined){return made}
-made=class extends cls.js_class{}
+var parent=klass.tp_mro.slice(1).find(k=> k !==cls && k.tp_mro?.includes(cls))
+if(parent===undefined){made=class extends cls.js_class{
+constructor(...args){
+return adopt(new.target,args)}}}else{
+made=class extends js_subclass(parent,cls){}}
 Object.defineProperty(made,'name',{value:klass.tp_name})
-for(var k of klass.tp_mro){if(k===cls){break}
-for(var entry of _b_.dict.$iter_items($B.get_dict(k))){let name=entry.key
-if(typeof name !='string' ||name.startsWith('__')||
-name in made.prototype){continue}
-Object.defineProperty(made.prototype,name,{configurable:true,get(){var self=PYOBJ_MAP.get(this)
-return self===undefined ? undefined :
-pyobj2jsobj($B.$getattr(self,name))}})}}
 JS_SUBCLASSES.set(klass,made)
+PYOBJ_MAP.set(made,klass)
+for(var k of klass.tp_mro){if(k===cls ||k===parent){break}
+for(var entry of _b_.dict.$iter_items($B.get_dict(k))){define_accessor(made,klass,entry.key)}}
 return made}
+function python_defines(klass,cls,name){for(var k of klass.tp_mro){if(k===cls){return false}
+if($B.get_from_dict(k,name,$B.NULL)!==$B.NULL){return true}}
+return false}
+function define_accessor(made,klass,name){if(typeof name !='string' ||name.startsWith('__')||
+name in made.prototype){return}
+function forward(...args){if(! PYOBJ_MAP.has(this)){throw new TypeError(`${name} called on an object that is no ${klass.tp_name}`)}
+return Reflect.apply(Reflect.get(made.prototype,name,this),this,args)}
+Object.defineProperty(made.prototype,name,{configurable:true,get(){if(PYOBJ_MAP.has(this)){return pyobj2jsobj(_b_.getattr).call(undefined,this,name)}
+var value=$B.$getattr(klass,name)
+return typeof value=='function' ? forward :pyobj2jsobj(value)},set(value){if(PYOBJ_MAP.has(this)){pyobj2jsobj(_b_.setattr).call(undefined,this,name,value)}else{
+Object.defineProperty(this,name,{value,writable:true,enumerable:true,configurable:true})}}})}
+function hold(self,jsobj){self.jsobj=jsobj
+self[JSOBJ]=jsobj
+PYOBJ_MAP.set(jsobj,self)}
+var adopting=null
+function declared_args(func,args){var infos=func?.$function_infos
+if(! Array.isArray(infos)){return null}
+var attrs=$B.func_attrs,positional=Math.max(infos[attrs.positional_length]-1,0),defaults=infos[attrs.__defaults__],required=positional-(defaults===_b_.None ? 0 :defaults.length),given=infos[attrs.args_vararg]?[...args]:args.slice(0,positional)
+while(given.length < required){given.push(undefined)}
+var start=infos[attrs.positional_length],kwonly=infos[attrs.arg_names].slice(start,start+infos[attrs.kwonlyargs_length]),kwdefaults=infos[attrs.__kwdefaults__],missing=kwonly.filter(name=> kwdefaults===_b_.None ||
+! Object.hasOwn(kwdefaults,name))
+return{given,missing}}
+function call_declared(func,first,passed){try{
+var args=passed.given.map(arg=> jsobj2pyobj(arg))
+if(passed.missing.length > 0){args.push({[$B.KW]:[Object.fromEntries(
+passed.missing.map(name=>[name,_b_.None]))]})}
+return pyobj2jsobj(func.call(undefined,first,...args))}catch(err){$B.handle_error(err)}}
+function adopt(target,args){var made=target,klass
+while((klass=PYOBJ_MAP.get(made))===undefined ||
+JS_SUBCLASSES.get(klass)!==made){made=Object.getPrototypeOf(made)}
+var outer=adopting
+adopting={klass,target}
+try{
+var make=$B.$getattr(klass,'__new__'),passed=declared_args(make,args),made_new=passed===null ? $B.$call(make,klass):
+call_declared(make,klass,passed),self=adopting.self
+if(self===undefined){
+if(made_new===null ||typeof made_new !='object'){throw new TypeError(`${klass.tp_name}.__new__ made no object`)}
+return pyobj2jsobj(made_new)}
+var init=$B.$getattr(self,'__init__')
+passed=declared_args(init.im_func,args)
+if(passed===null){$B.$call(init,...args)}else{
+call_declared(init.im_func,init.im_self,passed)}
+if(self.jsobj===undefined){
+hold(self,Reflect.construct(js_base(klass).js_class,[],target))}
+return self.jsobj}finally{
+adopting=outer}}
 function jsclass2pyclass(js_class){
 var known=JS_CLASSES.get(js_class)
 if(known !==undefined){return known}
@@ -13267,11 +13319,13 @@ exc.jsobj=new cls.js_class(...args)
 return exc}
 var res={ob_type:klass}
 $B.init_dict(res)
+if(adopting?.klass===klass && adopting.self===undefined){adopting.self=res}
 return res}
 )
-$B.set_to_dict(cls,'__init__',function(self,...args){if(! $B.$isinstance(self,_b_.BaseException)){self.jsobj=new(js_subclass($B.get_class(self),cls))(...args)
-self[JSOBJ]=self.jsobj
-PYOBJ_MAP.set(self.jsobj,self)
+$B.set_to_dict(cls,'__init__',function(self,...args){if(! $B.$isinstance(self,_b_.BaseException)){
+if(self.jsobj===undefined){var target=adopting?.self===self ? adopting.target :
+js_subclass($B.get_class(self),cls)
+hold(self,Reflect.construct(cls.js_class,args,target))}
 return}
 args=positional(args)
 var held=self.jsobj
@@ -13294,7 +13348,10 @@ return $B.$call(method,jsobj,...args)}
 )}
 $B.set_to_dict(cls,'__bool__',function(self){return $B.JSObj.nb_bool(self.jsobj)}
 )}
-$B.set_to_dict(cls,'__setattr__',function(self,attr,value){self.jsobj[attr]=pyobj2jsobj(value)}
+$B.set_to_dict(cls,'__setattr__',function(self,attr,value){
+if(! is_error_class(js_class)&&
+python_defines($B.get_class(self),cls,attr)){return _b_.object.tp_setattro(self,attr,value)}
+self.jsobj[attr]=pyobj2jsobj(value)}
 )
 if(is_error_class(js_class)){
 $B.set_to_dict(cls,'__str__',function(self){return String(self.jsobj.message)}
