@@ -1,7 +1,7 @@
 # Patches applied to the vendored Brython
 
 `brython_runtime.js` and `brython_compiler.js` are cut from one bundle, built
-from Brython's master of 11 September 2026 plus two hundred and sixty-four proposed commits
+from Brython's master of 11 September 2026 plus two hundred and sixty-six proposed commits
 (`metaclass-getattribute-args`, `iterator-setstate` and `getitem-binding` in two, as amended for their PRs), nine merged
 upstream since (#3022, #2996, #2989, #2982, #3125, #3047, #3119, #3072, and master's `3afab4451`), and a hundred and
 three of mine merged upstream between 12 September and 14 October that the bundle had missed, carried as master holds
@@ -239,6 +239,8 @@ written against:
 | `syntax-error-details-any` | a `SyntaxError` keeps its details as given, `None` included, where a type check refused them: `str(SyntaxError("m", (None, 3, 1, "x")))` is `m (line 3)` |
 | `oserror-errno-strerror` | `OSError(errno, strerror[, filename[, winerror[, filename2]]])` sets `errno`, `strerror`, `filename` and `filename2`, and its `str()` is `[Errno 2] gone` |
 | `oserror-errno-subclass` | `OSError(errno, strerror)` is the subclass its errno names, by the values of the `errno` module: `OSError(2, "gone")` is a `FileNotFoundError` |
+| `builtin-iterator-reduce` | a builtin iterator pickled part-way comes back where it stood, and the one pickled stays where it stood: `zip`, `enumerate`, `filter` and `map` reduce with the iterators they read, where three reduced to `undefined` and `map` started again; a list, tuple or str iterator with its sequence and its index, where it was consumed, or lost its place; a list's reversed iterator to `reversed`, at its index, where it came back forwards; a range iterator to what is left of the range; a dict's six iterators to what they have left, read off a new walk of the dict, where reducing one used it up; a set's iterator to what it has left, where it was refused; a bytes or bytearray iterator at its index, where it started again; `iter(callable, sentinel)` to its callable and its sentinel, where it was refused; `next()` on a `filter` before `iter()`, and `reversed()` of a range an iterator, where it was the range; and a dict's iterators give as their length hint what they have left, where five gave the dict's length and the items one raised |
+| `type-repr-qualname` | a class's repr shows its qualified name, `<class 'module.outer.<locals>.Box'>` for a class defined in a function, where it showed its bare name |
 
 It used to be ten. Eight went upstream, one branch each, and the re-vendoring of
 2026-09-11 took them back as ordinary Brython:

@@ -3090,9 +3090,10 @@ if(other !==_b_.None && ! $B.$isinstance(other,[type,$B.GenericAlias,$B.UnionTyp
 return $B.UnionType.$factory([cls,other])}
 _b_.type.tp_repr=function(kls){var name=$B.get_name(kls)
 var qualname
-if(kls.hasOwnProperty('tp_flags')&&(kls.tp_flags & TPFLAGS.HEAPTYPE)){var module=$B.$getattr(kls,'__module__',$B.NULL)
+if(kls.hasOwnProperty('tp_flags')&&(kls.tp_flags & TPFLAGS.HEAPTYPE)){
+var module=$B.$getattr(kls,'__module__',$B.NULL)
 qualname=(module===$B.NULL ||module=='builtins')? name :
-module+"."+name}else{
+module+"."+$B.$getattr(kls,'__qualname__',name)}else{
 qualname=name}
 return "<class '"+qualname+"'>"}
 _b_.type.tp_call=function(cls){var $=$B.args(cls?.tp_name ?? '__call__',1,{cls:null},arguments,null,'args','kw'),cls=$.cls,args=$.args,kw=$.kw,kw_len=_b_.dict.mp_length(kw)
@@ -4952,9 +4953,9 @@ throw err}}
 var enumerate=_b_.enumerate
 enumerate.__mro__=[_b_.object]
 enumerate.$factory=function(){var $ns=$B.args("enumerate",2,{iterable:null,start:null},arguments,{start:0},null,null)
-var iterable=$ns["iterable"],start=$ns["start"]
+var iterable=$ns["iterable"],start=$ns["start"],source=$B.$iter(iterable)
 return{
-ob_type:enumerate,__name__:'enumerate iterator',it:$B.make_js_iterator(iterable),counter:$B.PyNumber_Index(start)}}
+ob_type:enumerate,__name__:'enumerate iterator',source,it:$B.make_js_iterator(source),counter:$B.PyNumber_Index(start)}}
 _b_.enumerate.tp_iter=function(self){return self}
 _b_.enumerate.tp_iternext=function*(self){for(var item of self.it){var res=$B.fast_tuple([self.counter,item])
 self.counter=_b_.int.nb_add(self.counter,1)
@@ -4975,12 +4976,13 @@ if(start !==undefined){$B.RAISE(_b_.TypeError,"enumerate() receives argument 'st
 )}
 start=entry.value
 break}}
-var res={ob_type:cls,it:$B.make_js_iterator(iterable),counter:$B.PyNumber_Index(start ?? 0)}
+var source=$B.$iter(iterable)
+var res={ob_type:cls,source,it:$B.make_js_iterator(source),counter:$B.PyNumber_Index(start ?? 0)}
 $B.init_dict(res)
 return res}
 var enumerate_funcs=_b_.enumerate.tp_funcs={}
 enumerate_funcs.__class_getitem__=$B.$class_getitem
-enumerate_funcs.__reduce__=function(self){}
+enumerate_funcs.__reduce__=function(self){return $B.fast_tuple([$B.get_class(self),$B.fast_tuple([self.source,self.counter])])}
 _b_.enumerate.tp_methods=["__reduce__"]
 _b_.enumerate.noargs_methods=["__reduce__"]
 _b_.enumerate.classmethods=["__class_getitem__"]
@@ -4989,20 +4991,21 @@ $B.LOCALS_PROXY=Symbol('locals_proxy')
 var exit=_b_.exit=function(){throw _b_.SystemExit}
 exit.__repr__=exit.__str__=function(){return "Use exit() or Ctrl-Z plus Return to exit"}
 var filter=_b_.filter
-filter.$factory=function(func,iterable){check_nb_args_no_kw('filter',2,arguments)
-if(func===_b_.None){func=$B.$bool}
+function make_filter(cls,func,iterable){var source=$B.$iter(iterable)
 return{
-ob_type:filter,func:func,it:$B.make_js_iterator(iterable)}}
+ob_type:cls,func,source,it:$B.make_js_iterator(source)}}
+filter.$factory=function(func,iterable){check_nb_args_no_kw('filter',2,arguments)
+return make_filter(filter,func,iterable)}
 filter.tp_iter=function(self){return self}
-filter.tp_iternext=function*(self){for(var item of self.it){if($B.$bool($B.$call(self.func,item))){yield item}}}
+filter.tp_iternext=function*(self){for(var item of self.it){var kept=self.func===_b_.None ? item :$B.$call(self.func,item)
+if($B.$bool(kept)){yield item}}}
 filter.tp_new=function(cls,args,kw){var[func,iterable]=$B.unpack_args('filter',args,['func','iterable'],{})
 $B.check_kw_empty('filter',kw)
-var func=func===_b_.None ?(x)=> x :func
-var res={ob_type:cls,func,it:$B.make_js_iterator(iterable)}
+var res=make_filter(cls,func,iterable)
 if(cls !==_b_.filter){$B.init_dict(res)}
 return res}
 var filter_funcs=_b_.filter.tp_funcs={}
-filter_funcs.__reduce__=function(self){}
+filter_funcs.__reduce__=function(self){return $B.fast_tuple([$B.get_class(self),$B.fast_tuple([self.func,self.source])])}
 filter.tp_methods=["__reduce__"]
 filter.noargs_methods=["__reduce__"]
 $B.set_func_names(filter,"builtins")
@@ -5311,6 +5314,11 @@ throw err}
 if($B.$bool($B.is_or_equals(self.sentinel,res))){self.exhausted=true
 return}
 yield res}}
+var callable_iterator_funcs=callable_iterator.tp_funcs={}
+callable_iterator_funcs.__reduce__=function(self){
+if(self.exhausted){return $B.fast_tuple([_b_.iter,$B.fast_tuple([$B.fast_tuple([])])])}
+return $B.fast_tuple([_b_.iter,$B.fast_tuple([self.func,self.sentinel])])}
+callable_iterator.tp_methods=["__reduce__"]
 $B.set_func_names(callable_iterator,"builtins")
 $B.$iter=function(obj,sentinel){
 var test=false 
@@ -5357,11 +5365,11 @@ for(var key in locals_obj){if(key.startsWith('$')||key=='__class__'){continue}
 _b_.dict.$setitem(d,key,locals_obj[key])}
 return d}
 var map=_b_.map
-map.$factory=function(){var $=$B.args('map',2,{func:null,it1:null},arguments,null,'args',null),func=$.func
-var iter_args=[$B.make_js_iterator($.it1)]
-for(var arg of $.args){iter_args.push($B.make_js_iterator(arg))}
+function make_map(cls,func,iterables){var sources=iterables.map((iterable)=> $B.$iter(iterable))
 return{
-ob_type:map,args:iter_args,func:func,iterables:[$.it1,...$.args]}}
+ob_type:cls,args:sources.map((source)=> $B.make_js_iterator(source)),func,sources}}
+map.$factory=function(){var $=$B.args('map',2,{func:null,it1:null},arguments,null,'args',null)
+return make_map(map,$.func,[$.it1,...$.args])}
 _b_.map.tp_iter=function(self){return self}
 _b_.map.tp_iternext=function*(self){var args=[]
 for(var iter of self.args){var arg=iter.next()
@@ -5370,15 +5378,13 @@ args.push(arg.value)}
 yield $B.$call(self.func,...args)}
 _b_.map.tp_new=function(cls,args,kw){$B.check_kw_empty('map',kw)
 if(args.length < 2){$B.RAISE(_b_.TypeError,'map() must have at least two arguments.')}
-var[func,it1,...extra_args]=args
-var iter_args=[$B.make_js_iterator(it1)]
-for(var arg of extra_args){iter_args.push($B.make_js_iterator(arg))}
-var res={ob_type:cls,args:iter_args,func:func,iterables:[it1,...extra_args]}
+var[func,...iterables]=args
+var res=make_map(cls,func,iterables)
 if(cls !==_b_.map){$B.init_dict(res)}
 return res}
 var map_funcs=_b_.map.tp_funcs={}
-map_funcs.__reduce__=function(self){return $B.fast_tuple([$B.get_class(self),$B.fast_tuple([self.func,...(self.iterables ||[])])])}
-map_funcs.__setstate__=function(self){}
+map_funcs.__reduce__=function(self){return $B.fast_tuple([$B.get_class(self),$B.fast_tuple([self.func,...self.sources])])}
+map_funcs.__setstate__=function(self){return _b_.None}
 _b_.map.tp_methods=["__reduce__","__setstate__"]
 _b_.map.noargs_methods=["__reduce__"]
 $B.set_func_names(map,"builtins")
@@ -5554,13 +5560,13 @@ var reversed_funcs=_b_.reversed.tp_funcs={}
 reversed_funcs.__length_hint__=function(self){var n=self.counter
 return n < 0 ? 0 :n}
 reversed_funcs.__reduce__=function(self){var cls=self.ob_type
-if(self.seq===undefined){return $B.fast_tuple([cls,$B.fast_tuple([$B.fast_tuple([])])])}
-return $B.fast_tuple([cls,$B.fast_tuple([self.seq]),self.counter])}
+if(self.seq===undefined ||self.counter <=0){return $B.fast_tuple([cls,$B.fast_tuple([$B.fast_tuple([])])])}
+return $B.fast_tuple([cls,$B.fast_tuple([self.seq]),self.counter-1])}
 reversed_funcs.__setstate__=function(self,state){var n=typeof state==='bigint' ? Number(state):state
 if(typeof n !=='number'){n=Number(n)}
 if(n <-1){n=-1 }
-if(n > self.len){n=self.len }
-self.counter=n
+if(n > self.len-1){n=self.len-1 }
+self.counter=n+1
 return _b_.None}
 _b_.reversed.tp_methods=["__length_hint__","__reduce__","__setstate__"]
 _b_.reversed.noargs_methods=["__length_hint__","__reduce__"]
@@ -5725,12 +5731,11 @@ try{
 return $B.$getattr(obj,'__dict__')}catch(err){$B.RAISE_IF_NOT(err,_b_.AttributeError)
 $B.RAISE(_b_.TypeError,"vars() argument must have __dict__ attribute")}}
 var zip=_b_.zip
-zip.$factory=function(){var[args,kw]=$B.parse_args_kw('zip',arguments)
-var strict=$B.$bool($B.str_dict_get(kw,'strict',false))
-var iters=[]
-for(var arg of args){iters.push($B.make_js_iterator(arg))}
+function make_zip(cls,args,strict){var sources=Array.from(args).map(x=> $B.$iter(x))
 return{
-ob_type:zip,iters,strict}}
+ob_type:cls,sources,iters:sources.map(x=> $B.make_js_iterator(x)),strict}}
+zip.$factory=function(){var[args,kw]=$B.parse_args_kw('zip',arguments)
+return make_zip(zip,args,$B.$bool($B.str_dict_get(kw,'strict',false)))}
 _b_.zip.tp_iter=function(self){return self}
 _b_.zip.tp_iternext=function*(self){var res=[],len=self.iters.length
 if(len==0){return}
@@ -5743,14 +5748,15 @@ return}
 res.push(v.value)}
 yield $B.fast_tuple(res)}
 _b_.zip.tp_new=function(cls,args,kw){var strict=$B.$bool($B.str_dict_get(kw,'strict',false))
-var iters=[]
-for(var arg of args){iters.push($B.make_js_iterator(arg))}
-var res={ob_type:cls,iters,strict}
+var res=make_zip(cls,args,strict)
 if(cls !==_b_.zip){$B.init_dict(res)}
 return res}
 var zip_funcs=_b_.zip.tp_funcs={}
-zip_funcs.__reduce__=function(self){}
-zip_funcs.__setstate__=function(self){}
+zip_funcs.__reduce__=function(self){var reduced=[$B.get_class(self),$B.fast_tuple(self.sources)]
+if(self.strict){reduced.push(true)}
+return $B.fast_tuple(reduced)}
+zip_funcs.__setstate__=function(self,state){self.strict=$B.$bool(state)
+return _b_.None}
 _b_.zip.tp_methods=["__reduce__","__setstate__"]
 _b_.zip.noargs_methods=["__reduce__"]
 $B.set_func_names(zip,"builtins")
@@ -7184,7 +7190,9 @@ var range_iterator_funcs=$B.range_iterator.tp_funcs={}
 range_iterator_funcs.__length_hint__=function(self){var len=_b_.range.mp_length(self.obj),done=(self.it-self.start)/self.step
 return typeof done=='bigint' ?
 _b_.int.$int_or_long(BigInt(len)-done):len-done}
-range_iterator_funcs.__reduce__=function(self){return $B.fast_tuple([_b_.iter,$B.fast_tuple([self.obj]),_b_.None])}
+range_iterator_funcs.__reduce__=function(self){
+var left=range_iterator_funcs.__length_hint__(self),start=_b_.int.$int_or_long(self.it),stop=$B.rich_op('__add__',start,$B.rich_op('__mul__',left,self.step))
+return $B.fast_tuple([_b_.iter,$B.fast_tuple([$B.$call(_b_.range,start,stop,self.step)]),_b_.None])}
 range_iterator_funcs.__setstate__=function(self,value){
 var index=$B.clip_index($B.PyNumber_Index(value),0,range_iterator_funcs.__length_hint__(self))
 self.it+=typeof self.it=='bigint' ?
@@ -7277,7 +7285,7 @@ range_funcs.__reversed__=function(self){var n=$B.rich_op('__sub__',range.mp_leng
 var start=$B.rich_op('__add__',self.start,$B.rich_op('__mul__',n,self.step))
 var stop=$B.rich_op('__sub__',self.start,self.step)
 var step=$B.rich_op('__mul__',-1,self.step)
-return $B.$call(range,start,stop,step)}
+return $B.$iter($B.$call(range,start,stop,step))}
 range_funcs.count=function(self,ob){if($B.$isinstance(ob,[_b_.int,_b_.float,_b_.bool])){return _b_.int.$factory(range.sq_contains(self,ob))}else{
 var nb=0
 for(var item of $B.range_iterator.tp_iternext(range.tp_iter(self))){if($B.rich_comp("__eq__",ob,item)){nb++}}
@@ -7446,7 +7454,9 @@ return}
 yield self.obj.source[self.index]}
 var bytearray_iterator_funcs=$B.bytearray_iterator.tp_funcs={}
 bytearray_iterator_funcs.__length_hint__=function(self){return Math.max(0,self.obj.source.length-self.index-1)}
-bytearray_iterator_funcs.__reduce__=function(self){return $B.fast_tuple([_b_.iter,$B.fast_tuple([self.obj]),0])}
+bytearray_iterator_funcs.__reduce__=function(self){
+if(self.index===Infinity){return $B.fast_tuple([_b_.iter,$B.fast_tuple([$B.fast_tuple([])])])}
+return $B.fast_tuple([_b_.iter,$B.fast_tuple([self.obj]),self.index+1])}
 bytearray_iterator_funcs.__setstate__=function(self,value){
 var index=$B.clip_index(value,-1,self.obj.source.length)
 if(self.index !==Infinity){self.index=index < 0 ? Infinity :index-1}
@@ -8066,7 +8076,9 @@ return}
 yield self.obj.source[self.index]}
 var bytes_iterator_funcs=$B.bytes_iterator.tp_funcs={}
 bytes_iterator_funcs.__length_hint__=function(self){return Math.max(0,self.len-self.index-1)}
-bytes_iterator_funcs.__reduce__=function(self){return $B.fast_tuple([_b_.iter,$B.fast_tuple([self.obj]),0])}
+bytes_iterator_funcs.__reduce__=function(self){
+if(self.index===Infinity){return $B.fast_tuple([_b_.iter,$B.fast_tuple([$B.fast_tuple([])])])}
+return $B.fast_tuple([_b_.iter,$B.fast_tuple([self.obj]),self.index+1])}
 bytes_iterator_funcs.__setstate__=function(self,value){var index=$B.clip_index(value,0,self.len)
 if(self.index !==Infinity){self.index=index-1}
 return _b_.None}
@@ -8855,10 +8867,15 @@ return _b_.NotImplemented}
 set.__format__=function(self){return set.tp_repr(self)}
 var set_iterator=$B.make_builtin_class('set_iterator')
 set_iterator.tp_iter=function(self){return self}
-set_iterator.__length_hint__=function(self){return self.so.$used}
 set_iterator.tp_iternext=function*(self){for(var item of self.it){if(self.so.$version !=self.version){$B.RAISE(_b_.RuntimeError,"Set changed size during iteration")}
+self.counter++
 yield item}}
-set_iterator.__reduce_ex__=function(self){return $B.fast_tuple([_b_.iter,$B.fast_tuple([set_make_items(self.so)])])}
+var set_iterator_funcs=set_iterator.tp_funcs={}
+set_iterator_funcs.__length_hint__=function(self){return Math.max(0,self.so.$used-self.counter)}
+set_iterator_funcs.__reduce__=function(self){
+var left=Array.from(set_iter(self.so)).slice(self.counter)
+return $B.fast_tuple([_b_.iter,$B.fast_tuple([$B.$list(left)])])}
+set_iterator.tp_methods=["__length_hint__","__reduce__"]
 $B.set_func_names(set_iterator,'builtins')
 function set_make_items(so){
 var items=[]
@@ -8931,7 +8948,7 @@ _b_.set.tp_repr=function(self){$B.builtins_repr_check(set,arguments)
 return set_repr(self)}
 _b_.set.tp_hash=_b_.None
 _b_.set.tp_iter=function(self){return{
-ob_type:set_iterator,so:self,it:set_iter(self),version:self.$version}}
+ob_type:set_iterator,so:self,it:set_iter(self),counter:0,version:self.$version}}
 _b_.set.tp_init=function(self,iterable){if(iterable===_b_.None){return _b_.None}
 $B.check_nb_args_no_kw('set',1,arguments,true)
 if(Object.keys(self.$store).length > 0){set.clear(self)}
@@ -9177,7 +9194,9 @@ yield char}
 self.done=true}
 var str_iterator_funcs=$B.str_iterator.tp_funcs={}
 str_iterator_funcs.__length_hint__=function(self){return self.len-self.index}
-str_iterator_funcs.__reduce__=function(self){return $B.fast_tuple([_b_.iter,$B.fast_tuple([self.obj]),0])}
+str_iterator_funcs.__reduce__=function(self){
+if(self.done){return $B.fast_tuple([_b_.iter,$B.fast_tuple([''])])}
+return $B.fast_tuple([_b_.iter,$B.fast_tuple([self.obj]),self.index])}
 str_iterator_funcs.__setstate__=function(self,value){var index=$B.clip_index(value,0,self.len)
 if(! self.done){self.it=to_string(self.obj)[Symbol.iterator]()
 for(self.index=0;self.index < index;self.index++){self.it.next()}}
@@ -12200,7 +12219,7 @@ $B.repr.leave(self)
 return "{"+res.join(", ")+"}"}
 _b_.dict.tp_hash=_b_.None
 _b_.dict.tp_iter=function(self){return{
-ob_type:$B.dict_keyiterator,it:_b_.dict.$iter_items(self),dict_obj:self}}
+ob_type:$B.dict_keyiterator,counter:0,it:_b_.dict.$iter_items(self),dict_obj:self}}
 _b_.dict.tp_init=function(self,first,second){if(first===undefined){self[SIZE]=0
 return _b_.None}
 if(second===undefined){
@@ -12248,7 +12267,7 @@ return instance}
 var dict_funcs=_b_.dict.tp_funcs={}
 dict_funcs.__class_getitem__=$B.$class_getitem
 dict_funcs.__reversed__=function(self){return{
-ob_type:$B.dict_reversekeyiterator,it:_b_.dict.$iter_items_reversed(self),dict_obj:self}}
+ob_type:$B.dict_reversekeyiterator,counter:0,it:_b_.dict.$iter_items_reversed(self),dict_obj:self}}
 dict_funcs.__sizeof__=function(self){return 48}
 dict_funcs.clear=function(self){
 if(self[TABLE]){delete self[TABLE]
@@ -12339,7 +12358,7 @@ items=$B.$list(items)
 return 'dict_items('+_b_.repr(items)+')'}
 $B.dict_items.tp_hash=_b_.None
 $B.dict_items.tp_iter=function(self){return{
-ob_type:$B.dict_itemiterator,it:_b_.dict.$iter_items(self.dict_obj),dict_obj:self.dict_obj}}
+ob_type:$B.dict_itemiterator,counter:0,it:_b_.dict.$iter_items(self.dict_obj),dict_obj:self.dict_obj}}
 $B.dict_items.mp_length=function(self){return _b_.dict.mp_length(self.dict_obj)}
 $B.dict_items.sq_contains=function(self,obj){if(! $B.is_tuple(obj)||obj.length !=2){return false}
 var key=obj[0]
@@ -12350,7 +12369,7 @@ return false}
 return $B.is_or_equals(result,value)}
 var dict_items_funcs=$B.dict_items.tp_funcs={}
 dict_items_funcs.__reversed__=function(self){return{
-ob_type:$B.dict_reverseitemiterator,it:dict.$iter_items_reversed(self.dict_obj),dict_obj:self.dict_obj}}
+ob_type:$B.dict_reverseitemiterator,counter:0,it:dict.$iter_items_reversed(self.dict_obj),dict_obj:self.dict_obj}}
 dict_items_funcs.isdisjoint=function(self,other){var items=Array.from(dict.$iter_items(self.dict_obj))
 .map(x=> $B.fast_tuple([x.key,x.value]))
 var self_as_set=$B.$call(_b_.set,items)
@@ -12369,13 +12388,13 @@ $B.dict_keys.tp_repr=function(self){var keys=Array.from(dict.$iter_items(self.di
 return `dict_keys([${keys}])`}
 $B.dict_keys.tp_hash=_b_.None
 $B.dict_keys.tp_iter=function(self){return{
-ob_type:$B.dict_keyiterator,it:dict.$iter_items(self.dict_obj),dict_obj:self.dict_obj}}
+ob_type:$B.dict_keyiterator,counter:0,it:dict.$iter_items(self.dict_obj),dict_obj:self.dict_obj}}
 $B.dict_keys.mp_length=function(self){return dict.mp_length(self.dict_obj)}
 $B.dict_keys.sq_contains=function(self,value){for(var item of dict.$iter_items(self.dict_obj)){if($B.is_or_equals(item.key,value)){return true}}
 return false}
 var dict_keys_funcs=$B.dict_keys.tp_funcs={}
 dict_keys_funcs.__reversed__=function(self){return{
-ob_type:$B.dict_reversekeyiterator,it:_b_.dict.$iter_items_reversed(self.dict_obj),dict_obj:self.dict_obj}}
+ob_type:$B.dict_reversekeyiterator,counter:0,it:_b_.dict.$iter_items_reversed(self.dict_obj),dict_obj:self.dict_obj}}
 dict_keys_funcs.isdisjoint=function(self,other){var keys=Array.from(dict.$iter_items(self.dict_obj)).map(x=> x.key)
 var self_as_set=$B.$call(_b_.set,keys)
 return _b_.set.tp_funcs.isdisjoint(self_as_set,other)}
@@ -12387,64 +12406,66 @@ $B.dict_keys.tp_getset=["mapping"]
 $B.dict_values.tp_repr=function(self){var values=Array.from(dict.$iter_items(self.dict_obj)).map(x=> x.value)
 return `dict_values([${values}])`}
 $B.dict_values.tp_iter=function(self){return{
-ob_type:$B.dict_valueiterator,it:_b_.dict.$iter_items(self.dict_obj),dict_obj:self.dict_obj}}
+ob_type:$B.dict_valueiterator,counter:0,it:_b_.dict.$iter_items(self.dict_obj),dict_obj:self.dict_obj}}
 $B.dict_values.mp_length=function(self){return _b_.dict.mp_length(self.dict_obj)}
 var dict_values_funcs=$B.dict_values.tp_funcs={}
 dict_values_funcs.__reversed__=function(self){return{
-ob_type:$B.dict_reversevalueiterator,it:dict.$iter_items_reversed(self.dict_obj),dict_obj:self.dict_obj}}
+ob_type:$B.dict_reversevalueiterator,counter:0,it:dict.$iter_items_reversed(self.dict_obj),dict_obj:self.dict_obj}}
 dict_values_funcs.mapping_get=function(self){return $B.mappingproxy.tp_new($B.mappingproxy,[self.dict_obj],$B.empty_dict())}
 dict_values_funcs.mapping_set=_b_.None
 $B.dict_values.tp_methods=["__reversed__"]
 $B.dict_values.noargs_methods=["__reversed__"]
 $B.dict_values.tp_getset=["mapping"]
 $B.set_func_names($B.dict_values,'builtins')
+function dict_iterator_reduce(self,entries,read){var left=[],at=0
+for(var entry of entries){if(at++>=self.counter){left.push(read(entry))}}
+return $B.fast_tuple([_b_.iter,$B.fast_tuple([$B.$list(left)])])}
 $B.dict_keyiterator.tp_iter=function(self){return self}
-$B.dict_keyiterator.tp_iternext=function*(self){for(var item of self.it){yield item.key}}
+$B.dict_keyiterator.tp_iternext=function*(self){for(var item of self.it){self.counter++
+yield item.key}}
 var dict_keyiterator_funcs=$B.dict_keyiterator.tp_funcs={}
-dict_keyiterator_funcs.__length_hint__=function(self){return _b_.dict.mp_length(self.dict_obj)}
-dict_keyiterator_funcs.__reduce__=function(self){var keys=$B.$list(Array.from($B.dict_keyiterator.tp_iternext(self)))
-return $B.fast_tuple([_b_.iter,$B.fast_tuple([keys])])}
+dict_keyiterator_funcs.__length_hint__=function(self){return _b_.dict.mp_length(self.dict_obj)-self.counter}
+dict_keyiterator_funcs.__reduce__=function(self){return dict_iterator_reduce(self,_b_.dict.$iter_items(self.dict_obj),entry=> entry.key)}
 $B.dict_keyiterator.tp_methods=["__length_hint__","__reduce__"]
 $B.dict_keyiterator.noargs_methods=["__length_hint__","__reduce__"]
 $B.dict_reversekeyiterator.tp_iter=function(self){return self}
-$B.dict_reversekeyiterator.tp_iternext=function*(self){for(var entry of self.it){yield entry[0]}}
+$B.dict_reversekeyiterator.tp_iternext=function*(self){for(var entry of self.it){self.counter++
+yield entry[0]}}
 var dict_reversekeyiterator_funcs=$B.dict_reversekeyiterator.tp_funcs={}
-dict_reversekeyiterator_funcs.__length_hint__=function(self){return _b_.dict.mp_length(self.dict_obj)}
-dict_reversekeyiterator_funcs.__reduce__=function(self){let keys=Array.from(self.it).map(x=> x[0])
-return $B.fast_tuple([_b_.iter,$B.fast_tuple([$B.$list(keys)])])}
+dict_reversekeyiterator_funcs.__length_hint__=function(self){return _b_.dict.mp_length(self.dict_obj)-self.counter}
+dict_reversekeyiterator_funcs.__reduce__=function(self){return dict_iterator_reduce(self,dict.$iter_items_reversed(self.dict_obj),entry=> entry[0])}
 $B.dict_reversekeyiterator.tp_methods=["__length_hint__","__reduce__"]
 $B.dict_reversekeyiterator.noargs_methods=["__length_hint__","__reduce__"]
 $B.dict_valueiterator.tp_iter=function(self){return self}
-$B.dict_valueiterator.tp_iternext=function*(self){for(var item of self.it){yield item.value}}
+$B.dict_valueiterator.tp_iternext=function*(self){for(var item of self.it){self.counter++
+yield item.value}}
 var dict_valueiterator_funcs=$B.dict_valueiterator.tp_funcs={}
-dict_valueiterator_funcs.__length_hint__=function(self){return _b_.dict.mp_length(self.dict_obj)}
-dict_valueiterator_funcs.__reduce__=function(self){let values_list=$B.$list(
-Array.from($B.dict_valueiterator.tp_iternext(self))
-)
-return $B.fast_tuple([_b_.iter,$B.fast_tuple([values_list])])}
+dict_valueiterator_funcs.__length_hint__=function(self){return _b_.dict.mp_length(self.dict_obj)-self.counter}
+dict_valueiterator_funcs.__reduce__=function(self){return dict_iterator_reduce(self,_b_.dict.$iter_items(self.dict_obj),entry=> entry.value)}
 $B.dict_valueiterator.tp_methods=["__length_hint__","__reduce__"]
 $B.dict_valueiterator.noargs_methods=["__length_hint__","__reduce__"]
 $B.dict_reversevalueiterator.tp_iter=function(self){return self}
-$B.dict_reversevalueiterator.tp_iternext=function*(self){for(var item of self.it){yield item[1]}}
+$B.dict_reversevalueiterator.tp_iternext=function*(self){for(var item of self.it){self.counter++
+yield item[1]}}
 var dict_reversevalueiterator_funcs=$B.dict_reversevalueiterator.tp_funcs={}
-dict_reversevalueiterator_funcs.__length_hint__=function(self){return _b_.dict.mp_length(self.dict_obj)}
-dict_reversevalueiterator_funcs.__reduce__=function(self){let values=Array.from(self.it).map(x=> x[1])
-return $B.fast_tuple([_b_.iter,$B.fast_tuple([$B.$list(values)])])}
+dict_reversevalueiterator_funcs.__length_hint__=function(self){return _b_.dict.mp_length(self.dict_obj)-self.counter}
+dict_reversevalueiterator_funcs.__reduce__=function(self){return dict_iterator_reduce(self,dict.$iter_items_reversed(self.dict_obj),entry=> entry[1])}
 $B.dict_reversevalueiterator.tp_methods=["__length_hint__","__reduce__"]
 $B.dict_reversevalueiterator.noargs_methods=["__length_hint__","__reduce__"]
 $B.dict_itemiterator.tp_iter=function(self){return self}
-$B.dict_itemiterator.tp_iternext=function*(self){for(var item of self.it){yield $B.fast_tuple([item.key,item.value])}}
+$B.dict_itemiterator.tp_iternext=function*(self){for(var item of self.it){self.counter++
+yield $B.fast_tuple([item.key,item.value])}}
 var dict_itemiterator_funcs=$B.dict_itemiterator.tp_funcs={}
-dict_itemiterator_funcs.__length_hint__=function(self){return_b_.dict.mp_length(self.obj)}
-dict_itemiterator_funcs.__reduce__=function(self){let items_list=$B.$list(Array.from($B.dict_itemiterator.tp_iternext(self)))
-return $B.fast_tuple([_b_.iter,$B.fast_tuple([items_list])])}
+dict_itemiterator_funcs.__length_hint__=function(self){return _b_.dict.mp_length(self.dict_obj)-self.counter}
+dict_itemiterator_funcs.__reduce__=function(self){return dict_iterator_reduce(self,_b_.dict.$iter_items(self.dict_obj),entry=> $B.fast_tuple([entry.key,entry.value]))}
 $B.dict_itemiterator.tp_methods=["__length_hint__","__reduce__"]
 $B.dict_itemiterator.noargs_methods=["__length_hint__","__reduce__"]
 $B.dict_reverseitemiterator.tp_iter=function(self){return self}
-$B.dict_reverseitemiterator.tp_iternext=function*(self){for(var item of self.it){yield item}}
+$B.dict_reverseitemiterator.tp_iternext=function*(self){for(var item of self.it){self.counter++
+yield item}}
 var dict_reverseitemiterator_funcs=$B.dict_reverseitemiterator.tp_funcs={}
-dict_reverseitemiterator_funcs.__length_hint__=function(self){return _b_.dict.mp_length(self.dict_obj)}
-dict_reverseitemiterator_funcs.__reduce__=function(self){return $B.fast_tuple([_b_.iter,$B.fast_tuple([$B.$list(Array.from(self.it))])])}
+dict_reverseitemiterator_funcs.__length_hint__=function(self){return _b_.dict.mp_length(self.dict_obj)-self.counter}
+dict_reverseitemiterator_funcs.__reduce__=function(self){return dict_iterator_reduce(self,dict.$iter_items_reversed(self.dict_obj),entry=> entry)}
 $B.dict_reverseitemiterator.tp_methods=["__length_hint__","__reduce__"]
 $B.dict_reverseitemiterator.noargs_methods=["__length_hint__","__reduce__"]
 $B.empty_dict=function(){var res={}
@@ -12645,7 +12666,9 @@ $B.list_iterator.tp_iternext=function*(self){if(self.index < self.obj.length){yi
 self.index=Infinity}}
 var list_iterator_funcs=$B.list_iterator.tp_funcs={}
 list_iterator_funcs.__length_hint__=function(self){return Math.max(0,self.obj.length-self.index)}
-list_iterator_funcs.__reduce__=function(self){return $B.fast_tuple([_b_.iter,$B.fast_tuple([list.$factory(self)]),0])}
+list_iterator_funcs.__reduce__=function(self){
+if(self.index===Infinity){return $B.fast_tuple([_b_.iter,$B.fast_tuple([$B.$list([])])])}
+return $B.fast_tuple([_b_.iter,$B.fast_tuple([self.obj]),self.index])}
 list_iterator_funcs.__setstate__=function(self,state){
 var index=$B.clip_index(state,-1,self.obj.length)
 if(self.index !==Infinity){self.index=index < 0 ? Infinity :index}
@@ -12705,7 +12728,9 @@ yield res}}
 var list_reverseiterator_funcs=$B.list_reverseiterator.tp_funcs={}
 list_reverseiterator_funcs.__length_hint__=function(self){var len=self.counter+1
 return len <=self.items.length ? Math.max(0,len):0}
-list_reverseiterator_funcs.__reduce__=function(self){return $B.fast_tuple([_b_.iter,$B.fast_tuple([list.$factory(self).reverse()]),0])}
+list_reverseiterator_funcs.__reduce__=function(self){
+if(self.counter < 0 ||self.counter >=self.items.length){return $B.fast_tuple([_b_.reversed,$B.fast_tuple([$B.$list([])])])}
+return $B.fast_tuple([_b_.reversed,$B.fast_tuple([self.items]),self.counter])}
 list_reverseiterator_funcs.__setstate__=function(self,state){self.counter=$B.clip_index(state,-1,self.items.length-1)
 return _b_.None}
 $B.list_reverseiterator.tp_methods=["__length_hint__","__reduce__","__setstate__"]
@@ -12908,7 +12933,9 @@ $B.tuple_iterator.tp_iternext=function*(self){if(self.index < self.obj.length){y
 self.index=Infinity}}
 var tuple_iterator_funcs=$B.tuple_iterator.tp_funcs={}
 tuple_iterator_funcs.__length_hint__=function(self){return Math.max(0,self.obj.length-self.index)}
-tuple_iterator_funcs.__reduce__=function(self){}
+tuple_iterator_funcs.__reduce__=function(self){
+if(self.index===Infinity){return $B.fast_tuple([_b_.iter,$B.fast_tuple([$B.fast_tuple([])])])}
+return $B.fast_tuple([_b_.iter,$B.fast_tuple([self.obj]),self.index])}
 tuple_iterator_funcs.__setstate__=function(self,state){var index=$B.clip_index(state,0,self.obj.length)
 if(self.index !==Infinity){self.index=index}
 return _b_.None}
