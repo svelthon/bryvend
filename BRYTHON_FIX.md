@@ -1,7 +1,7 @@
 # Patches applied to the vendored Brython
 
 `brython_runtime.js` and `brython_compiler.js` are cut from one bundle, built
-from Brython's master of 11 September 2026 plus two hundred and sixty-eight proposed commits
+from Brython's master of 11 September 2026 plus two hundred and sixty-nine proposed commits
 (`metaclass-getattribute-args`, `iterator-setstate` and `getitem-binding` in two, as amended for their PRs), nine merged
 upstream since (#3022, #2996, #2989, #2982, #3125, #3047, #3119, #3072, and master's `3afab4451`), and a hundred and
 three of mine merged upstream between 12 September and 14 October that the bundle had missed, carried as master holds
@@ -242,6 +242,7 @@ written against:
 | `builtin-iterator-reduce` | a builtin iterator pickled part-way comes back where it stood, and the one pickled stays where it stood: `zip`, `enumerate`, `filter` and `map` reduce with the iterators they read, where three reduced to `undefined` and `map` started again; a list, tuple or str iterator with its sequence and its index, where it was consumed, or lost its place; a list's reversed iterator to `reversed`, at its index, where it came back forwards; a range iterator to what is left of the range; a dict's six iterators to what they have left, read off a new walk of the dict, where reducing one used it up; a set's iterator to what it has left, where it was refused; a bytes or bytearray iterator at its index, where it started again; `iter(callable, sentinel)` to its callable and its sentinel, where it was refused; `next()` on a `filter` before `iter()`, and `reversed()` of a range an iterator, where it was the range; and a dict's iterators give as their length hint what they have left, where five gave the dict's length and the items one raised |
 | `type-repr-qualname` | a class's repr shows its qualified name, `<class 'module.outer.<locals>.Box'>` for a class defined in a function, where it showed its bare name |
 | `dict-integer-string-keys-order` | a dict keeps the insertion order of its string keys that read as integers: JavaScript enumerates such properties first, in numeric order, so `{"2025": 1, "2024": 2, "b": 3}` iterated `2024, 2025, b`. A new one sends the dict to its table, and so does one that a dict made from a JavaScript object brings into another; `dict.update()` of a JavaScript object goes through the dict's own setting, where it wrote properties only, so a dict with other keys lost them. So do the keyword arguments a dict brings, `f(**d)`, `dict(**d)`, `d.update(**d)`, in the order PEP 468 keeps |
+| `js-iterable-iterator` | each `iter()` of a JavaScript iterable is a new iterator, as `for...of` asks one for each loop, where the object kept one on itself and was its own: two nested loops over one `Set` gave two pairs of four; one that is its own iterator, a generator, is itself |
 | `async-comprehension` | an `async for` in a list, set or dict comprehension awaits each value, as the statement does, where it walked the object synchronously: `[c async for c in stream]` gave `[]` on a JavaScript stream and raised `TypeError` on an asynchronous generator. A generator expression that awaits is an asynchronous generator, allowed outside an `async def`; a comprehension that awaits elsewhere is refused as CPython refuses it |
 
 It used to be ten. Eight went upstream, one branch each, and the re-vendoring of

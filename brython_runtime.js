@@ -13575,8 +13575,10 @@ $B.IterableJSObj=$B.make_builtin_class('IterableJavascriptObject',[$B.JSObj])
 $B.IterableJSObj.sq_contains=function(self,key){if(self.contains !==undefined && typeof self.contains=='function'){return self.contains(key)}else{
 for(var item of $B.IterableJSObj.tp_iter(self).it){if($B.is_or_equals(item,key)){return true}}
 return false}}
-$B.IterableJSObj.tp_iter=function(self){self.it=self[Symbol.iterator]()
+$B.IterableJSObj.tp_iter=function(self){var it=self[Symbol.iterator]()
+if(it===self){self.it=it
 return self}
+return{ob_type:js_array_iterator,it}}
 $B.IterableJSObj.sq_length=function(self){return self.length}
 $B.IterableJSObj.tp_iternext=function*(self){if(self.it===undefined){
 self.it=self[Symbol.iterator]()}
