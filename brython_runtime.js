@@ -1614,10 +1614,19 @@ if(! slots.hasOwnProperty(k)){if(kwarg){extra_kw[k]=kw[k]}}else if(slots[k]!==em
 extra_kw[k]=kw[k]}else{
 throw multiple_values(fname,k)}}else{
 slots[k]=kw[k]}}
-if(kwarg){slots[kwarg]=_b_.dict.$from_js(extra_kw)}
+if(kwarg){slots[kwarg]=kwargs_dict(extra_kw,kw)}
 if(vararg){slots[vararg]=$B.fast_tuple(varargs)}
 return slots}
 function to_str(key){return typeof key=='string' ? key :key.$brython_value}
+var KW_ORDER=Symbol('kw_order')
+function set_keyword(kwa,key,value){if(kwa[KW_ORDER]===undefined && $B.array_index(key)){kwa[KW_ORDER]=Object.keys(kwa)}
+kwa[key]=value
+kwa[KW_ORDER]?.push(key)}
+function kwargs_dict(obj,kw=obj){var order=kw[KW_ORDER]
+if(order===undefined){return _b_.dict.$from_js(obj)}
+var res=$B.empty_dict()
+for(var key of order){if(Object.hasOwn(obj,key)){_b_.dict.$setitem(res,key,obj[key])}}
+return res}
 $B.parse_kwargs=function(kw_args,fname){var kwa=kw_args[0]
 for(var i=1,len=kw_args.length;i < len;i++){var kw_arg=kw_args[i],key,value
 if($B.get_class(kw_arg)===_b_.dict){for(var entry of _b_.dict.$iter_items(kw_arg)){key=$B.is_str(entry.key)? to_str(entry.key):entry.key
@@ -1625,7 +1634,7 @@ if(typeof key !=='string'){$B.RAISE(_b_.TypeError,fname+
 "() keywords must be strings")}else if(Object.hasOwn(kwa,key)){$B.RAISE(_b_.TypeError,fname+
 "() got multiple values for argument '"+
 key+"'")}else{
-kwa[key]=entry.value}}}else{
+set_keyword(kwa,key,entry.value)}}}else{
 var cls=$B.get_class(kw_arg)
 try{
 var keys_method=$B.$getattr(cls,'keys')}catch(err){$B.RAISE(_b_.TypeError,`${fname}() argument `+
@@ -1639,7 +1648,7 @@ if(Object.hasOwn(kwa,k)){$B.RAISE(_b_.TypeError,fname+
 k+"'")}
 if(! getitem){try{
 getitem=$B.$getattr(cls,'__getitem__')}catch(err){$B.RAISE(_b_.TypeError,`'${$B.class_name(kw_arg)}' object is not subscriptable`)}}
-kwa[k]=$B.$call(getitem,kw_arg,k)}}}
+set_keyword(kwa,k,$B.$call(getitem,kw_arg,k))}}}
 return kwa}
 $B.parse_tuple=function(args,start,types){
 if(args.length-start !==types.length){$B.RAISE(_b_.TypeError,`function takes exactly ${types.length} arguments `+
@@ -1688,9 +1697,10 @@ return args}
 $B.check_kw_empty=function(name,kw){if(kw && _b_.dict.mp_length(kw)> 0){$B.RAISE(_b_.TypeError,`${name}() takes no keyword arguments`)}}
 $B.parse_args_kw=function(fname,args){var last=args[args.length-1]
 if(last?.[$B.KW]){var kw=$B.parse_kwargs(last[$B.KW],fname)
-kw[$B.OB_TYPE]=_b_.dict
 args=Array.from(args)
 args.pop()
+if(kw[KW_ORDER]!==undefined){return[args,kwargs_dict(kw)]}
+kw[$B.OB_TYPE]=_b_.dict
 return[args,kw]}
 return[args,$B.empty_dict()]}
 $B.get_class=function(obj){
@@ -4150,8 +4160,7 @@ report=`${missing.slice(0, len - 1).join(', ')}, and `+
 `${missing[len - 1]}`
 break}
 return report}
-function add_to_kwargs(kw_dict,key,value){if(typeof key=='string'){$B.str_dict_set(kw_dict,key,value)}else{
-_b_.dict.$setitem(kw_dict,key,value)}}
+function add_to_kwargs(kw_dict,key,value){_b_.dict.$setitem(kw_dict,key,value)}
 function reset_args_parser(self){self.$arguments_parser=make_arguments_parser(self)}
 $B.args_parser=function(f,args){if(! f.$arguments_parser){f.$arguments_parser=make_arguments_parser(f)}
 return f.$arguments_parser(f,args)}
@@ -4203,13 +4212,13 @@ if(index==-1){if(kwarg){add_to_kwargs(locals[kwarg],key,value)
 return}else{
 $B.RAISE(_b_.TypeError,name+
 `() got an unexpected keyword argument '${param}'`)}}
-if(Object.hasOwn(locals,param)){if(kwarg && index < posonly_length){$B.str_dict_set(locals[kwarg],param,value)
+if(Object.hasOwn(locals,param)){if(kwarg && index < posonly_length){add_to_kwargs(locals[kwarg],key,value)
 return}
 $B.RAISE(_b_.TypeError,name+
 `() got multiple values for argument '${param}'`)}
 if(index < posonly_length){if(defaults===_b_.None ||
 index <=positional_length-defaults.length){
-if(kwarg){$B.str_dict_set(locals[kwarg],param,value)}else{
+if(kwarg){add_to_kwargs(locals[kwarg],key,value)}else{
 posonly_as_keywords=posonly_as_keywords ??[]
 posonly_as_keywords.push(param)}}}else{
 $B.str_dict_set(locals,param,value)
@@ -12000,7 +12009,7 @@ if(d[VERSION]!==version){$B.RAISE(_b_.RuntimeError,'dictionary changed size duri
 var $copy_dict=function(left,right){
 right[VERSION]=right[VERSION]||0
 var right_version=right[VERSION]
-if(! right[KEYS]){if(! left[KEYS]){for(let key in right){$B.str_dict_set(left,key,right[key])
+if(! right[KEYS]){if(! left[KEYS]&& ! adds_array_index(left,right)){for(let key in right){$B.str_dict_set(left,key,right[key])
 if(left[$B.JSOBJ]){left[$B.JSOBJ][key]=right[key]}}}else{
 for(let key in right){dict.$setitem(left,key,right[key])}}}else{
 for(var entry of dict.$iter_items(right)){dict.$setitem(left,entry.key,entry.value,entry.hash)
@@ -12076,7 +12085,7 @@ return true}
 function dict_update_arg(self,arg){
 if($B.$isinstance(arg,dict)&&
 $B.search_in_mro($B.get_class(arg),'__iter__',$B.NULL)===
-$B.search_in_dict(dict,'__iter__',$B.NULL)){$copy_dict(self,arg)}else if($B.get_class(arg)===$B.JSObj){for(let key in arg){$B.str_dict_set(self,key,$B.jsobj2pyobj(arg[key]))}}else if($B.$getattr(arg,"keys",$B.NULL)!==$B.NULL){for(let key of $B.make_js_iterator($B.$call($B.$getattr(arg,"keys")))){dict.$setitem(self,key,$B.$getitem1(arg,key))}}else{
+$B.search_in_dict(dict,'__iter__',$B.NULL)){$copy_dict(self,arg)}else if($B.get_class(arg)===$B.JSObj){for(let key in arg){dict.$setitem(self,key,$B.jsobj2pyobj(arg[key]))}}else if($B.$getattr(arg,"keys",$B.NULL)!==$B.NULL){for(let key of $B.make_js_iterator($B.$call($B.$getattr(arg,"keys")))){dict.$setitem(self,key,$B.$getitem1(arg,key))}}else{
 let it=_b_.iter(arg),i=0,key_value
 while(true){try{
 var item=_b_.next(it)}catch(err){if($B.is_exc(err,_b_.StopIteration)){break}
@@ -12125,8 +12134,7 @@ string.$brython_value :string
 if(typeof name !=='string'){$B.RAISE(_b_.TypeError,'keywords must be strings')}
 if(keys.has(name)){$B.RAISE(_b_.TypeError,'dict() got multiple values for keyword '+
 `argument '${name}'`)}
-if(name===string){d[string]=value}else{
-dict.$setitem(d,string,value)}
+dict.$setitem(d,string,value)
 keys.add(name)}
 function add_mapping(d,obj){for(var entry of _b_.dict.$iter_items(obj)){dict.$setitem(d,entry.key,entry.value,entry.hash)}}
 function add_iterable(d,js_iterable){var i=0
@@ -12142,6 +12150,12 @@ for(var i=d[KEYS].length-1;i >=0;i--){var key=d[KEYS][i]
 if(key !==undefined){yield $B.fast_tuple([key,d[VALUES][i]])
 if(d[VERSION]!==version){$B.RAISE(_b_.RuntimeError,'dictionary changed size during iteration')}}}}
 if(d[VERSION]!==version){$B.RAISE(_b_.RuntimeError,'dictionary changed size during iteration')}}
+function array_index(key){var index=Number(key)>>> 0
+return index !==4294967295 && String(index)===key}
+$B.array_index=array_index
+function adds_array_index(left,right){for(let key in right){if(! array_index(key)){return false}
+if(! Object.hasOwn(left,key)){return true}}
+return false}
 function convert_all_str(d){
 d[TABLE]=Object.create(null)
 d[KEYS]=[]
@@ -12157,12 +12171,13 @@ var new_str_key
 if(typeof key=='string'){
 new_str_key=! Object.hasOwn(self,key)
 $B.str_dict_set(self,key,value)}
-if(! self[TABLE]){if(typeof key=='string'){var int=parseInt(key)
-if(isNaN(int)||int >=0){if(new_str_key){self[VERSION]=self[VERSION]?? 0
+if(! self[TABLE]){if(typeof key=='string'){if(!(new_str_key && array_index(key))){if(new_str_key){self[VERSION]=self[VERSION]?? 0
 self[VERSION]++}
 $B.str_dict_set(self,key,value)
 return _b_.None}else{
-convert_all_str(self)}}else{
+delete self[key]
+convert_all_str(self)
+self[key]=value}}else{
 convert_all_str(self)}}
 if(key instanceof String){key=key.valueOf()}
 var hash=$hash !==undefined ? $hash :$B.hash_for(key,'a dict key')
@@ -12323,7 +12338,7 @@ index--}}
 dict_funcs.setdefault=function(self){var $=$B.args("setdefault",3,{self:null,key:null,_default:null},arguments,{_default:_b_.None})
 var self=$.self,key=$.key,_default=$._default
 _default=_default===undefined ? _b_.None :_default
-if(! self[TABLE]){if(typeof key=='string'){if(! Object.hasOwn(self,key)){$B.str_dict_set(self,key,_default)}
+if(! self[TABLE]){if(typeof key=='string' &&(Object.hasOwn(self,key)||! array_index(key))){if(! Object.hasOwn(self,key)){$B.str_dict_set(self,key,_default)}
 return self[key]}else{
 convert_all_str(self)}}
 var lookup=dict.$lookup_by_key(self,key)
@@ -13569,15 +13584,27 @@ for(var value of self.it){yield jsobj2pyobj(value)}}
 $B.set_func_names($B.IterableJSObj,'builtins')
 $B.AsyncIterableJSObj=$B.make_builtin_class('AsyncIterableJavascriptObject',[$B.JSObj])
 var js_async_iterators=new WeakMap()
-$B.AsyncIterableJSObj.am_aiter=function(self){js_async_iterators.set(self,self[Symbol.asyncIterator]())
-return self}
+function js_async_next(iterator){return iterator.next().then(function(step){if(step.done){$B.RAISE(_b_.StopAsyncIteration)}
+return jsobj2pyobj(step.value)})}
+function js_async_close(iterator){if(iterator===undefined ||typeof iterator.return !='function'){return Promise.resolve(_b_.None)}
+return iterator.return().then(()=> _b_.None)}
+$B.AsyncIterableJSObj.am_aiter=function(self){var iterator=self[Symbol.asyncIterator]()
+js_async_iterators.set(self,iterator)
+return iterator===self ? self :{ob_type:js_async_iterator,iterator}}
 $B.AsyncIterableJSObj.am_anext=function(self){var iterator=js_async_iterators.get(self)
 if(iterator===undefined){
 iterator=self[Symbol.asyncIterator]()
 js_async_iterators.set(self,iterator)}
-return iterator.next().then(function(step){if(step.done){$B.RAISE(_b_.StopAsyncIteration)}
-return jsobj2pyobj(step.value)})}
+return js_async_next(iterator)}
+$B.AsyncIterableJSObj.tp_funcs={aclose:function(self){return js_async_close(js_async_iterators.get(self))}}
+$B.AsyncIterableJSObj.tp_methods=['aclose']
 $B.set_func_names($B.AsyncIterableJSObj,'builtins')
+var js_async_iterator=$B.make_builtin_class('AsyncJavascriptIterator')
+js_async_iterator.am_aiter=function(self){return self}
+js_async_iterator.am_anext=function(self){return js_async_next(self.iterator)}
+js_async_iterator.tp_funcs={aclose:function(self){return js_async_close(self.iterator)}}
+js_async_iterator.tp_methods=['aclose']
+$B.set_func_names(js_async_iterator,'builtins')
 var js_array_iterator=$B.make_builtin_class('JSArray_iterator')
 js_array_iterator.$factory=function(obj){return{
 ob_type:js_array_iterator,it:obj[Symbol.iterator]()}}
