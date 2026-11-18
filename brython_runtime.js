@@ -17179,11 +17179,30 @@ if(typeof value=='string'){js=ast_obj.body[0].value.to_js(scopes)
 ast_obj.body.shift()}}
 return js}
 function init_comprehension(comp,scopes){if(comp.type=='genexpr'){return init_genexpr(comp,scopes)}
+if(comp.ast.generators[0].is_async){return prefix+`var aiter_${comp.id} = ${aiter_of('expr')}\n`}
 return prefix+`var next_func_${comp.id} = $B.make_js_iterator(expr, frame, ${comp.ast.lineno})\n`}
+function aiter_of(iterable){return `$B.$call($B.$getattr(_b_.type.$factory(${iterable}), "__aiter__"), ${iterable})`}
+function comprehension_loop(id,is_async){if(! is_async){return prefix+`for (var next_${id} of next_func_${id}) {\n`}
+return prefix+`while (true) {\n`+
+prefix+tab+`try {\n`+
+prefix+tab+tab+`var next_${id} = $B.resumed(await $B.promise($B.$call(_b_.anext, aiter_${id})))\n`+
+prefix+tab+`} catch (err) {\n`+
+prefix+tab+tab+`if ($B.is_exc(err, [_b_.StopAsyncIteration])) {\n`+
+prefix+tab+tab+tab+`break\n`+
+prefix+tab+tab+`}\n`+
+prefix+tab+tab+`throw err\n`+
+prefix+tab+`}\n`}
+function await_comprehension(ast,scopes){var ix=scopes.length-1
+while(scopes[ix].parent){ix--}
+var holder=scopes[ix].ast
+if(holder instanceof $B.ast.ListComp ||holder instanceof $B.ast.SetComp ||
+holder instanceof $B.ast.DictComp ||
+holder instanceof $B.ast.GeneratorExp){scopes[ix].has_await=true}else if(holder instanceof $B.ast.AsyncFunctionDef){scopes[ix].has_await=true}else{
+compiler_error(ast,'asynchronous comprehension outside of an asynchronous function')}}
 function init_genexpr(comp,scopes){var varnames=Object.keys(comp.varnames ||{}).map(x=> `'${x}'`).join(', ')
 return prefix+`var ${comp.locals_name} = {},\n`+
 prefix+tab+tab+`locals = ${comp.locals_name}\n`+
-prefix+`locals['.0'] = expr\n`+
+prefix+`locals['.0'] = ${comp.ast.generators[0].is_async ? aiter_of('expr') : 'expr'}\n`+
 prefix+`var frame = ["<${comp.type.toLowerCase()}>", ${comp.locals_name}, `+
 `${JSON.stringify(comp.module_name)}, ${comp.globals_name}]\n`+
 prefix+`frame.$js_this = $B.frame_js_this()\n`+
@@ -17191,7 +17210,8 @@ prefix+`frame.$has_generators = true\n`+
 prefix+`frame.__file__ = ${JSON.stringify(scopes.filename)}\n`+
 prefix+`frame.$lineno = ${comp.ast.lineno}\n`+
 prefix+`$B.make_f_code(frame, [${varnames}])\n`+
-prefix+`var next_func_${comp.id} = $B.make_js_iterator(expr, frame, ${comp.ast.lineno})\n`+
+(comp.ast.generators[0].is_async ? '' :
+prefix+`var next_func_${comp.id} = $B.make_js_iterator(expr, frame, ${comp.ast.lineno})\n`)+
 prefix+`frame.$f_trace = _b_.None\n`+
 prefix+`var _frame_obj = $B.frame_obj\n`}
 function make_comp(scopes){
@@ -17211,7 +17231,7 @@ if(this instanceof $B.ast.ListComp){js+=prefix+`var result_${id} = $B.$list([])\
 var first=this.generators[0]
 js+=prefix+`try {\n`
 indent()
-js+=prefix+`for (var next_${id} of next_func_${id}) {\n`
+js+=comprehension_loop(id,first.is_async)
 indent()
 var name=new $B.ast.Name(`next_${id}`,new $B.ast.Load())
 copy_position(name,first_for.iter)
@@ -17227,7 +17247,8 @@ nb_paren++
 for(let _if of comprehension.ifs){nb_paren++}}
 if(this instanceof $B.ast.DictComp){var key=$B.js_from_ast(this.key,scopes),value=$B.js_from_ast(this.value,scopes)}else{
 var elt=$B.js_from_ast(this.elt,scopes)}
-var has_await=comp_scope.has_await
+var has_await=comp_scope.has_await ||
+this.generators.some(generator=> generator.is_async)
 js=`(${has_await ? 'async ' : ''}function(expr) {\n`+
 (has_await ? 'var save_frame_obj = $B.frame_obj;\n' :'')+js
 if(this instanceof $B.ast.ListComp){js+=prefix+`result_${id}.push(${elt})\n`}else if(this instanceof $B.ast.SetComp){js+=prefix+`$B.set_add(result_${id}, ${elt})\n`}else if(this instanceof $B.ast.DictComp){js+=prefix+`_b_.dict.$setitem(result_${id}, ${key}, ${value})\n`}
@@ -17246,6 +17267,7 @@ js+=prefix+`return result_${id}\n`
 dedent()
 js+=prefix+`}`+`)(${outmost_expr})\n`
 scopes.pop()
+if(has_await){await_comprehension(this,scopes)}
 return has_await ? `(await ${js})` :js}
 function init_scopes(type,scopes){
 var filename=scopes?.symtable?.table?.filename,name=$B.url2name[filename]
@@ -17542,6 +17564,8 @@ while(scopes[ix].ast instanceof $B.ast.ListComp ||
 scopes[ix].ast instanceof $B.ast.DictComp ||
 scopes[ix].ast instanceof $B.ast.SetComp ||
 scopes[ix].ast instanceof $B.ast.GeneratorExp){scopes[ix].has_await=true
+if(scopes[ix].ast instanceof $B.ast.GeneratorExp){
+return `$B.resumed(await $B.promise(${$B.js_from_ast(this.value, scopes)}))`}
 ix--
 while(scopes[ix].parent){ix--}}
 if(scopes[ix].ast instanceof $B.ast.AsyncFunctionDef){scopes[ix].has_await=true
@@ -17746,8 +17770,11 @@ comps.push(`$B.rich_comp('${op}', ${left}, `+
 if(len > 1){left='locals.$op'}}
 return comps.join(' && ')}
 $B.ast.comprehension.prototype.to_js=function(scopes){var id=make_id(),iter=$B.js_from_ast(this.iter,scopes)
-var js=prefix+`var next_func_${id} = $B.make_js_iterator(${iter}, frame, ${this.lineno})\n`+
-prefix+`for (var next_${id} of next_func_${id}) {\n`
+var js=this.is_async ?
+prefix+`var aiterable_${id} = ${iter},\n`+
+prefix+tab+tab+`aiter_${id} = ${aiter_of(`aiterable_${id}`)}\n` :
+prefix+`var next_func_${id} = $B.make_js_iterator(${iter}, frame, ${this.lineno})\n`
+js+=comprehension_loop(id,this.is_async)
 indent()
 var name=new $B.ast.Name(`next_${id}`,new $B.ast.Load())
 copy_position(name,this.target)
@@ -18198,14 +18225,16 @@ scopes.push(comp_scope)
 var comp={ast:this,id,type:'genexpr',varnames,module_name:scopes[0].name,locals_name:make_scope_name(scopes),globals_name:make_globals_name(scopes)}
 indent()
 var head=init_comprehension(comp,scopes)
-var js=prefix+`var gen${id} = $B.generator.$factory(${has_await ? 'async ' : ''}function*(expr){\n`
+var factory_prefix=prefix,entered=`\u0001enter_frame_${id}\u0001`,js=''
 var first=this.generators[0]
 indent()
-js+=prefix+`$B.enter_frame(frame, __file__, ${this.lineno})\n`+
-prefix+`var next_func_${id} = $B.make_js_iterator(expr, frame, ${this.lineno})\n`+
-prefix+`for (var next_${id} of next_func_${id}) {\n`
+js+=prefix+entered+'\n'+
+(first.is_async ?
+prefix+`var aiter_${id} = expr\n` :
+prefix+`var next_func_${id} = $B.make_js_iterator(expr, frame, ${this.lineno})\n`)+
+comprehension_loop(id,first.is_async)
 indent()
-js+=prefix+`$B.enter_frame(frame, __file__, ${this.lineno})\n`
+js+=prefix+entered+'\n'
 var name=new $B.ast.Name(`next_${id}`,new $B.ast.Load())
 copy_position(name,first_for.iter)
 name.to_js=function(){return `next_${id}`}
@@ -18219,28 +18248,33 @@ for(var comprehension of this.generators.slice(1)){js+=comprehension.to_js(scope
 nb_paren++
 for(let _if of comprehension.ifs){nb_paren++}}
 dedent(2)
-var elt=$B.js_from_ast(this.elt,scopes),has_await=comp_scope.has_await
+var elt=$B.js_from_ast(this.elt,scopes),has_await=comp_scope.has_await ||
+this.generators.some(generator=> generator.is_async)
+js=factory_prefix+`var gen${id} = `+
+(has_await ? '$B.async_generator.$factory(async ' :'$B.generator.$factory(')+
+`function*(expr){\n`+
+js.split(entered).join(has_await ? '' :`$B.enter_frame(frame, __file__, ${this.lineno})`)
+var leave='$B.leave_frame()\n',leave_value=has_await ? '' :leave
 dedent()
 indent(3)
-js+=has_await ? prefix+'var save_frame_obj = $B.frame_obj;\n' :''
 js+=prefix+`try {\n`+
-prefix+tab+`yield ${elt}\n`+
+prefix+tab+`yield ${has_await ? `$B.yielded(${elt})` : elt}\n`+
 prefix+`} catch (err) {\n`+
-(has_await ? prefix+tab+'$B.restore_frame_obj(save_frame_obj, locals)\n' :'')+
-prefix+tab+`$B.leave_frame()\n`+
+prefix+tab+leave+
 prefix+tab+`throw err\n`+
 prefix+`}\n`
 dedent()
-js+=(has_await ? prefix+'\n$B.restore_frame_obj(save_frame_obj, locals);' :'')
 for(var i=0;i < nb_paren-1;i++){js+=prefix+'}\n'
 dedent()}
-js+=prefix+'$B.leave_frame()\n'
+js+=prefix+leave_value
 dedent()
 js+=prefix+'}\n'
-js+=prefix+'$B.leave_frame()\n'
-js+=prefix+'}, "<genexpr>")(expr)\n'
+js+=prefix+leave
+js+=prefix+`}, "<genexpr>")(${first.is_async ? "locals['.0']" : 'expr'})\n`
 scopes.pop()
-var func=`${head}\n${js}\n`+prefix+`return gen${id}`
+var func=`${head}\n${js}\n`+
+(has_await ? prefix+`gen${id}.$frame = frame\n` :'')+
+prefix+`return gen${id}`
 dedent()
 return prefix+`(function(expr) {\n${func}\n`+
 prefix+`})(${outmost_expr})\n`}
