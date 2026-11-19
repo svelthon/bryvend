@@ -1486,7 +1486,29 @@ function string_error(p,token,msg){$B.helper_functions.RAISE_SYNTAX_ERROR_KNOWN_
 function SurrogatePair(value){this.value=value}
 $B.unicode_names_unread="(unicode error) the names of Unicode characters "+
 "could not be read here: write the character itself"
+var cjk_unified=[[0x3400,0x4DBF],[0x4E00,0x9FFF],[0x20000,0x2A6DF],[0x2A700,0x2B739],[0x2B740,0x2B81D],[0x2B820,0x2CEA1],[0x2CEB0,0x2EBE0],[0x2EBF0,0x2EE5D],[0x30000,0x3134A],[0x31350,0x323AF]],jamo_l=['G','GG','N','D','DD','R','M','B','BB','S','SS','','J','JJ','C','K','T','P','H'],jamo_v=['A','AE','YA','YAE','EO','E','YEO','YE','O','WA','WAE','OE','YO','U','WEO','WE','WI','YU','EU','YI','I'],jamo_t=['','G','GG','GS','N','NJ','NH','D','L','LG','LM','LB','LS','LT','LP','LH','M','B','BS','S','SS','NG','J','C','K','T','P','H']
+function longest_jamo(names,text,pos){
+var found=-1
+for(var i=0;i < names.length;i++){if(text.startsWith(names[i],pos)&&
+(found==-1 ||names[i].length > names[found].length)){found=i}}
+return found}
+function algorithmic_cp(name){
+var mo=/^CJK UNIFIED IDEOGRAPH-([0-9A-F]{4,5})$/.exec(name)
+if(mo){var cp=parseInt(mo[1],16)
+for(var range of cjk_unified){if(cp >=range[0]&& cp <=range[1]){return cp}}
+return null}
+if(name.startsWith('HANGUL SYLLABLE ')){var pos='HANGUL SYLLABLE '.length,l=longest_jamo(jamo_l,name,pos)
+pos+=jamo_l[l].length
+var v=longest_jamo(jamo_v,name,pos)
+if(v==-1){return null}
+pos+=jamo_v[v].length
+var t=longest_jamo(jamo_t,name,pos)
+pos+=jamo_t[t].length
+return pos==name.length ? 0xAC00+(l*21+v)*28+t :null}
+return undefined}
 $B.unicode_name_to_cp=function(name){
+var algorithmic=algorithmic_cp(name.toUpperCase())
+if(algorithmic !==undefined){return algorithmic}
 if($B.unicodedb===undefined){if(typeof XMLHttpRequest=='undefined'){
 return undefined}
 var xhr=new XMLHttpRequest
@@ -1587,7 +1609,9 @@ if(cp===null){string_error(p,token,"(unicode error) "+
 "unknown Unicode character name")}else if(cp===undefined){
 string_error(p,token,$B.unicode_names_unread)}else{
 zone+=String.fromCodePoint(cp)
-end=end_lit+1}}else{
+end=end_lit+1}}else if(src.charAt(end+1)=='N' && ! bytes){
+string_error(p,token,"(unicode error) "+
+"malformed \\N character escape")}else{
 var esc=test_escape(p,token,context,src,string_start,end)
 if(esc){if(esc[0]=='\\'){zone+='\\\\'}else if(esc[0]instanceof SurrogatePair){zone+=String.fromCodePoint(esc[0].value)}else{
 zone+=esc[0]}

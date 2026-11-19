@@ -881,7 +881,7 @@ pos=b.pos}else{
 carets+=' '.repeat(b.pos-pos-1)+'^'
 pos=b.pos}}
 if(carets){console.log(carets)}}
-var state="line_start",char,cp,mo,pos=0,quote,triple_quote,escaped=false,string_start,string,prefix,name,number,num_type,comment,indent,indent_before_continuation=0,indents=[],braces=[],line,line_num=0,line_start=1,token_modes=['regular'],token_mode='regular',save_mode=token_mode,format_specifier,ft_type,ft_buffer,ft_start,ft_expr_start,ft_escape,ft_format_spec,ft_chunk_start,braces_length_on_entry,fstring_stack=[],debug=0
+var state="line_start",char,cp,mo,pos=0,quote,triple_quote,escaped=false,string_start,string,prefix,name,number,num_type,comment,indent,indent_before_continuation=0,indents=[],braces=[],line,line_num=0,line_start=1,token_modes=['regular'],token_mode='regular',save_mode=token_mode,format_specifier,ft_type,ft_buffer,ft_start,ft_expr_start,ft_escape,ft_format_spec,ft_chunk_start,ft_chunk_index,braces_length_on_entry,fstring_stack=[],debug=0
 if(parser){parser.braces=braces}
 t.push(Token('ENCODING','utf-8',0,0,0,0,''))
 while(pos < src.length){char=src[pos]
@@ -894,6 +894,7 @@ pos++}
 pos++
 if(token_mode !=save_mode){if(token_mode=='ft'){ft_buffer=''
 ft_chunk_start=pos-line_start-char.length+1
+ft_chunk_index=pos-char.length
 ft_escape=false}else if(token_mode=='format_specifier'){format_specifier=''
 ft_chunk_start=pos-line_start-char.length+1}}
 save_mode=token_mode
@@ -921,7 +922,10 @@ ft_expr_start=$B.last(fstring_stack).expr_start}
 token_modes.pop()
 token_mode=$B.last(token_modes)
 state=null
-continue}else if(char=='{'){if(src.charAt(pos)=='{'){
+continue}else if(char=='{'){if(ft_escape){
+ft_buffer+='\\\\'
+ft_escape=false}
+if(src.charAt(pos)=='{'){
 ft_buffer+=char
 pos++
 continue}else{
@@ -931,7 +935,9 @@ $B.last(fstring_stack).nb_braces_on_entry=braces.length
 ft_expr_start=pos-line_start
 $B.last(fstring_stack).expr_start=ft_expr_start
 state=null
-token_modes.push(token_mode)}}else if(char=='}'){if(src.charAt(pos)=='}'){
+token_modes.push(token_mode)}}else if(char=='}'){if(ft_escape){ft_buffer+='\\\\'
+ft_escape=false}
+if(src.charAt(pos)=='}'){
 ft_buffer+=char
 pos++
 continue}else{
@@ -958,7 +964,18 @@ if(cp===null ||cp===undefined){raise_error(_b_.SyntaxError,filename,line_num,pos
 ft_buffer+=String.fromCodePoint(cp)
 pos=end_name+1
 ft_escape=false
-continue}else if(char=='U' && /^[0-9a-f]{8}$/i.test(src.substr(pos,8))){
+continue}
+var digits={x:2,u:4,U:8}[char]
+if(digits !==undefined){
+var hex=/^[0-9a-f]*/i.exec(src.substr(pos,digits))[0]
+if(hex.length < digits){
+var start=0
+for(var c of src.substring(ft_chunk_index,pos-2)){start+=c.codePointAt(0)< 128 ? 1 :10}
+raise_error(_b_.SyntaxError,filename,line_num,pos-line_start-1,line_num,pos-line_start+hex.length,line,"(unicode error) 'unicodeescape' codec can't "+
+"decode bytes in position "+start+"-"+
+(start+1+hex.length)+": truncated \\"+
+char+"X".repeat(digits)+" escape")}}
+if(char=='U' && /^[0-9a-f]{8}$/i.test(src.substr(pos,8))){
 ft_buffer+=String.fromCodePoint(parseInt(src.substr(pos,8),16))
 pos+=8
 ft_escape=false
@@ -13410,7 +13427,9 @@ $B.set_func_names(js_iterator,'builtins')
 function JSObj_eq(self,other){return self===other ? true :_b_.NotImplemented}
 $B.JSObj=$B.make_builtin_class("JSObject")
 $B.JSObj.$factory=jsobj2pyobj
-$B.JSObj.nb_bool=function(self){if(typeof self=='object'){if(Array.isArray(self)){return self.length > 0}
+$B.JSObj.nb_bool=function(self){if(typeof self=='object'){
+if(Array.isArray(self)||
+(ArrayBuffer.isView(self)&& !(self instanceof DataView))){return self.length > 0}
 var proto=Object.getPrototypeOf(self)
 return proto===Object.prototype ||proto===null ?
 Object.keys(self).length > 0 :true}
@@ -13506,8 +13525,18 @@ let offset=0
 for(var i=_slice.start;i < _slice.stop;i+=_slice.step){res[offset++]=_self.item(i)}
 return res}
 $B.RAISE(_b_.KeyError,key)}
-$B.JSObj.mp_ass_subscript=function(self,key,value){if(is_typed_array(self)&& typeof key !="string" && typeof key !="symbol" &&
-! $B.exact_type(key,_b_.slice)){key=typed_index(self,key)}
+$B.JSObj.mp_ass_subscript=function(self,key,value){if(is_typed_array(self)&& typeof key !="string" && typeof key !="symbol"){
+if(value===$B.NULL){$B.RAISE(_b_.TypeError,`'${self.constructor.name}' object `+
+"doesn't support item deletion")}
+if($B.exact_type(key,_b_.slice)){var{start,stop,step}=_b_.slice.$conv_for_seq(key,self.length),ranks=[],items=_b_.list.$factory(value)
+for(var i=start;step > 0 ? i < stop :i > stop;i+=step){ranks.push(i)}
+if(items.length !=ranks.length){$B.RAISE(_b_.ValueError,"attempt to assign sequence of "+
+`size ${items.length} to slice of size ${ranks.length}, `+
+"which a typed array cannot resize")}
+ranks.forEach((rank,i)=>{
+$B.JSObj.tp_setattro(self,rank,items[i])})
+return _b_.None}
+key=typed_index(self,key)}
 return $B.JSObj.tp_setattro(self,key,value)}
 $B.JSObj.tp_repr=function(self){if(typeof self=='number'){return self+''}
 var func=typeof self=='function' ? self.$js_func ?? self :undefined
