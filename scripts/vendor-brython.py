@@ -9,7 +9,8 @@ and the VFS with whatever the local tree happens to hold. This does lines 33 to
 61 of it and nothing else: concatenate `core_scripts`, minify each, write out.
 Nothing in the Brython checkout is touched.
 
-The runtime bundle is the full one with the parsing chain cut out, and the cut is
+The runtime bundle is the full one with the parsing chain cut out, and the
+builtins' docstrings left out (`LEFT_OUT`). The cut is
 made **by the markers**, not by a module list of our own: `compiler_scripts` and
 the two marker strings are read from Brython's own build scripts, so this runs
 the same contract a stranger would run against a published `brython.js`.
@@ -68,6 +69,11 @@ COMMONJS_EXPORT = (
     'if(__BRYTHON__.isNode){global.__BRYTHON__=__BRYTHON__\nmodule.exports={__BRYTHON__ }}',
     'if(__BRYTHON__.isNode){global.__BRYTHON__=__BRYTHON__}'
 )
+
+# Left out of the runtime: the builtins' docstrings, 9.6 KB gzip in every page,
+# which only `help(len)` and `len.__doc__` read, `None` there as in every
+# Brython before the table joined its build.
+LEFT_OUT = ['builtins_docstrings']
 
 
 def build(skip=()):
@@ -138,16 +144,17 @@ def write(path, body):
 
 
 full = build()
-runtime = cut(full)
+runtime = cut(build(skip=LEFT_OUT))
 
 # Checked on every build rather than taken on faith: cutting by the markers
 # gives exactly what leaving those modules out of the concatenation gives. If it
 # ever stops holding, the parsing chain has stopped being contiguous.
+assert all(name in core_scripts and name not in compiler_scripts for name in LEFT_OUT), 'a module left out is gone'
 assert full.count(COMPILER_CHAIN_OPEN) == 1, 'the opening marker is not unique'
 assert full.count(COMPILER_CHAIN_CLOSE) == 1, 'the closing marker is not unique'
 assert COMPILER_CHAIN_OPEN not in runtime, 'the opening marker survived the cut'
 assert COMPILER_CHAIN_CLOSE not in runtime, 'the closing marker survived the cut'
-assert runtime == build(skip=compiler_scripts), 'cutting by marker and building without differ'
+assert runtime == build(skip=compiler_scripts + LEFT_OUT), 'cutting by marker and building without differ'
 
 os.makedirs(BUILD, exist_ok=True)
 write(os.path.join(BUILD, 'brython.js'), ours(full))

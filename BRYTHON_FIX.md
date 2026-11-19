@@ -262,6 +262,12 @@ It used to be ten. Eight went upstream, one branch each, and the re-vendoring of
 | the integer format: `preformat` in `int_funcs`, and the `=` branch of `$B.format_width` | CPython's order for an int with a base prefix. The sign comes first, `-0xf` where Brython wrote `0x-f`, and a `0` fill goes after sign and prefix, `0x0f` where Brython wrote `00xf`. Right upstream too, and not yet sent there |
 | `$B.$call`: a `__call__` that is not a function goes through its `__get__` first | CPython's `slot_tp_call`, which binds before it calls. `@classmethod def __call__` gets its class, where Brython raised `object is not callable`; a `@staticmethod` one keeps its answer. Proposed upstream as `call-slot-descriptor` (#3128), and kept here as an edit rather than a commit of `vendor-base` |
 
+**One module left out of the runtime**, not of the full bundle in `build/`:
+`builtins_docstrings`, the docstrings of the builtins, 9.6 KB gzip in every
+page, which only `help(len)` and `len.__doc__` read. Both see `None`, as in
+every Brython before the table joined its build. An optimization of this
+package: Brython keeps the table, as CPython does.
+
 Wrapping the file works because `var` keeps its module scope inside a block, so
 the 1.4 MB below is untouched: two added lines, top and bottom.
 
