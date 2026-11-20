@@ -1799,7 +1799,7 @@ frame=$B.frame_obj.frame
 lineno=frame.$lineno}}else if(frame===$B.NULL){
 set_lineno=()=> null}
 var cls=$B.get_class(iterator)
-if(Object.hasOwn(cls,$B.FAST_ITER)){return cls[$B.FAST_ITER](iterator,set_lineno,frame,lineno)}
+if(Object.hasOwn(cls,$B.FAST_ITER)){return cls[$B.FAST_ITER](iterator,set_lineno,frame,lineno,inum)}
 var it=$B.$iter(iterator)
 var test=false 
 if(test){console.log('make js iterator',it)}
@@ -2999,7 +2999,8 @@ if(cls.tp_subclasses===undefined){console.log('no subclasses',cls)}
 for(var kls of cls.tp_subclasses){reset_iter(kls)}}
 $B.make_fast_iter=function(cls){if(cls.tp_base &&
 cls.tp_base[$B.FAST_ITER]&&
-$B.get_from_dict(cls,'__iter__',$B.NULL)===$B.NULL){cls[$B.FAST_ITER]=cls.tp_base[$B.FAST_ITER]}}
+$B.get_from_dict(cls,'__iter__',$B.NULL)===$B.NULL &&
+$B.get_from_dict(cls,'__next__',$B.NULL)===$B.NULL){cls[$B.FAST_ITER]=cls.tp_base[$B.FAST_ITER]}}
 $B.make_new=function(cls){cls.tp_new=$B.NULL
 for(var kls of cls.tp_mro){if(kls.tp_flags & $B.TPFLAGS.HEAPTYPE){var _new=$B.get_from_dict(kls,'__new__',$B.NULL)
 if(_new !==$B.NULL){if($B.get_class(_new)===_b_.staticmethod){_new=_new.sm_callable}
@@ -4793,10 +4794,8 @@ _b_.abs=function(obj){check_nb_args_no_kw('abs',1,arguments)
 return $B.call_special_unary(obj,'__abs__','abs()')}
 _b_.aiter=function(async_iterable){return $B.$call($B.$getattr(async_iterable,'__aiter__'))}
 _b_.all=function(obj){check_nb_args_no_kw('all',1,arguments)
-var iterable=iter(obj)
-while(1){try{
-var elt=next(iterable)
-if(!$B.$bool(elt)){return false}}catch(err){return true}}}
+for(var elt of $B.make_js_iterator(obj)){if(! $B.$bool(elt)){return false}}
+return true}
 _b_.anext=function(){var $=$B.args('anext',2,{async_iterator:null,_default:null},arguments,{_default:$B.NULL},null,null)
 var awaitable=$B.$call($B.$getattr($.async_iterator,'__anext__'))
 return Promise.resolve($B.awaited(awaitable)[0]).catch(
@@ -5638,11 +5637,9 @@ if($B.$isinstance(start,_b_.bytes)){$B.RAISE(_b_.TypeError,"sum() can't sum byte
 " [use b''.join(seq) instead]")}
 if($B.$isinstance(start,_b_.bytearray)){$B.RAISE(_b_.TypeError,"sum() can't sum bytearray"+
 " [use b''.join(seq) instead]")}
-var res=start,done={},item,add=(x,y)=> $B.rich_op('__add__',x,y),take=()=>{
-try{
-return next(iterable)}catch(err){if($B.is_exc(err,[_b_.StopIteration])){return done}
-throw err}}
-iterable=iter(iterable)
+var items=$B.make_js_iterator(iterable),res=start,done={},item,add=(x,y)=> $B.rich_op('__add__',x,y),take=()=>{
+var step=items.next()
+return step.done ? done :step.value}
 if($B.get_class(res)===_b_.int){while(true){item=take()
 if(item===done){return res}
 res=add(res,item)
@@ -7212,6 +7209,13 @@ yield res}}else{
 while(self.it > self.stop){var res=_b_.int.$int_or_long(self.it)
 self.it+=self.step
 yield res}}}}
+$B.range_iterator[$B.FAST_ITER]=function(self,set_lineno,frame,lineno){var up=self.stop > self.start
+return{
+[Symbol.iterator](){return this},next(){set_lineno(frame,lineno)
+if(up ? self.it < self.stop :self.it > self.stop){var res=self.safe ? self.it :_b_.int.$int_or_long(self.it)
+self.it+=self.step
+return{done:false,value:res}}
+return{done:true,value:null}}}}
 var range_iterator_funcs=$B.range_iterator.tp_funcs={}
 range_iterator_funcs.__length_hint__=function(self){var len=_b_.range.mp_length(self.obj),done=(self.it-self.start)/self.step
 return typeof done=='bigint' ?
@@ -9218,6 +9222,13 @@ $B.str_iterator.tp_iter=function(self){return self}
 $B.str_iterator.tp_iternext=function*(self){for(var char of self.it){self.index++
 yield char}
 self.done=true}
+$B.str_iterator[$B.FAST_ITER]=function(self,set_lineno,frame,lineno){return{
+[Symbol.iterator](){return this},next(){set_lineno(frame,lineno)
+var res=self.it.next()
+if(res.done){self.done=true
+return{done:true,value:null}}
+self.index++
+return res}}}
 var str_iterator_funcs=$B.str_iterator.tp_funcs={}
 str_iterator_funcs.__length_hint__=function(self){return self.len-self.index}
 str_iterator_funcs.__reduce__=function(self){
@@ -10149,16 +10160,12 @@ $B.in_unicode_category('Lt',cp)){return false}}
 return is_upper}
 str_funcs.join=function(self,iterable){$B.check_nb_args_no_kw('str.join',1,arguments,true)
 var _self=to_string(self)
-iterable=_b_.iter(iterable)
-var res=[],count=0
-while(1){try{
-var obj2=_b_.next(iterable)
+var items=Array.from($B.make_js_iterator(iterable)),res=[]
+for(var count=0;count < items.length;count++){var obj2=items[count]
 if(! $B.is_str(obj2)){$B.RAISE(_b_.TypeError,"sequence item "+count+
 ": expected str instance, "+$B.class_name(obj2)+
 " found")}
-res.push(to_string(obj2))
-count++}catch(err){if($B.$isinstance(err,_b_.StopIteration)){break}else{
-throw err}}}
+res.push(to_string(obj2))}
 return $B.String(res.join(_self))}
 str_funcs.ljust=function(self){var $=$B.args("ljust",3,{self:null,width:null,fillchar:null},arguments,{fillchar:" "},null,null),_self=to_string($.self),len=str.mp_length(_self),width=$B.PyNumber_Index($.width)
 if(width <=len){return _self}
@@ -12260,7 +12267,6 @@ return _b_.None}else if(first[$B.KW]){var keys=new Set()
 for(let item of first[$B.KW]){if($B.$isinstance(item,dict)){for(let subitem of dict.$iter_items(item)){dict.$set_string_no_duplicate(self,keys,subitem.key,subitem.value)}}else{
 for(let key in item){dict.$set_string_no_duplicate(self,keys,key,item[key])}}}
 return _b_.None}else if(first[Symbol.iterator]){init_from_list(self,first)
-return _b_.None}else if($B.exact_type(first,$B.generator)){init_from_list(self,first.js_gen)
 return _b_.None}}
 var $=$B.args("dict",1,{self:null},arguments,null,"first","second")
 var args=$.first
@@ -12696,6 +12702,11 @@ var list_iterator=$B.list_iterator
 $B.list_iterator.tp_iter=function(self){return self}
 $B.list_iterator.tp_iternext=function*(self){if(self.index < self.obj.length){yield self.obj[self.index++]}else{
 self.index=Infinity}}
+$B.list_iterator[$B.FAST_ITER]=function(self,set_lineno,frame,lineno){return{
+[Symbol.iterator](){return this},next(){set_lineno(frame,lineno)
+if(self.index < self.obj.length){return{done:false,value:self.obj[self.index++]}}
+self.index=Infinity
+return{done:true,value:null}}}}
 var list_iterator_funcs=$B.list_iterator.tp_funcs={}
 list_iterator_funcs.__length_hint__=function(self){return Math.max(0,self.obj.length-self.index)}
 list_iterator_funcs.__reduce__=function(self){
@@ -12963,6 +12974,7 @@ tuple.$is_sequence=true
 $B.tuple_iterator.tp_iter=function(self){return self}
 $B.tuple_iterator.tp_iternext=function*(self){if(self.index < self.obj.length){yield self.obj[self.index++]}else{
 self.index=Infinity}}
+$B.tuple_iterator[$B.FAST_ITER]=$B.list_iterator[$B.FAST_ITER]
 var tuple_iterator_funcs=$B.tuple_iterator.tp_funcs={}
 tuple_iterator_funcs.__length_hint__=function(self){return Math.max(0,self.obj.length-self.index)}
 tuple_iterator_funcs.__reduce__=function(self){
@@ -13871,11 +13883,31 @@ res.$infos=func.$infos
 res.$is_genfunc=true
 res.$name=name
 return res}
+$B.generator.$iterator=function(next,name){var finished=false
+var js_gen={next(){if(finished){return{done:true,value:undefined}}
+try{
+var res=next()}catch(err){finished=true
+throw err}
+if(res.done){finished=true}
+return res},throw(err){finished=true
+throw err},return(value){finished=true
+return{done:true,value}}}
+js_gen.$name=name
+js_gen.$has_run=false
+return{
+ob_type:$B.generator,js_gen}}
 $B.generator.tp_repr=function(self){var name=self.js_gen.$name ||'generator'
 if(self.js_gen.$func && self.js_gen.$func.$infos){name=self.js_gen.$func.$infos.__qualname__}
 return `<generator object ${name}>`}
 $B.generator.tp_iter=function(self){return self}
 $B.generator.tp_iternext=function*(self){while(true){yield $B.generator.tp_funcs.send(self,_b_.None)}}
+$B.generator[$B.FAST_ITER]=function(self,set_lineno,frame,lineno,inum){return{
+[Symbol.iterator](){return this},next(){set_lineno(frame,lineno)
+try{
+var res=resume(self,_b_.None)}catch(err){if($B.is_exc(err,[_b_.StopIteration])){return{done:true,value:null}}
+if(inum){$B.set_inum(inum)}
+throw err}
+return res.done ?{done:true,value:null}:res}}}
 $B.generator.tp_finalize=function(self){}
 var generator_funcs=$B.generator.tp_funcs={}
 generator_funcs.__class_getitem__=function(){return $B.$class_getitem.apply(null,arguments)}
@@ -13910,7 +13942,7 @@ generator_funcs.gi_suspended_get=function(self){}
 generator_funcs.gi_suspended_set=function(self){}
 generator_funcs.gi_yieldfrom_get=function(self){}
 generator_funcs.gi_yieldfrom_set=function(self){}
-generator_funcs.send=function(self,value){
+function resume(self,value){
 var gen=self.js_gen
 gen.$has_run=true
 if(gen.$finished){$B.RAISE(_b_.StopIteration)}
@@ -13932,11 +13964,13 @@ throw exc}
 throw err}
 if($B.frame_obj !==null && $B.frame_obj.frame===self.$frame){$B.leave_frame()}
 $B.frame_obj=save_frame_obj
-if(res.value && $B.exact_type(res.value,$GeneratorReturn)){gen.$finished=true
-$B.RAISE(_b_.StopIteration,res.value.value)}
+if(res.value && res.value.ob_type===$GeneratorReturn){gen.$finished=true
+return{done:true,value:res.value.value}}
 gen.gi_running=false
-if(res.done){gen.$finished=true
-$B.RAISE(_b_.StopIteration,res.value)}
+if(res.done){gen.$finished=true}
+return res}
+generator_funcs.send=function(self,value){var res=resume(self,value)
+if(res.done){$B.RAISE(_b_.StopIteration,res.value)}
 return res.value}
 generator_funcs.throw=function(self){var $=$B.args('throw',4,{self:null,type:null,value:null,traceback:null},arguments,{value:_b_.None,traceback:_b_.None})
 var self=$.self,type=$.type,value=$.value,traceback=$.traceback
@@ -17237,7 +17271,8 @@ prefix+`locals['.0'] = ${comp.ast.generators[0].is_async ? aiter_of('expr') : 'e
 prefix+`var frame = ["<${comp.type.toLowerCase()}>", ${comp.locals_name}, `+
 `${JSON.stringify(comp.module_name)}, ${comp.globals_name}]\n`+
 prefix+`frame.$js_this = $B.frame_js_this()\n`+
-prefix+`frame.$has_generators = true\n`+
+(comp.as_iterator ? prefix+`frame.ob_type = $B.frame\n` :
+prefix+`frame.$has_generators = true\n`)+
 prefix+`frame.__file__ = ${JSON.stringify(scopes.filename)}\n`+
 prefix+`frame.$lineno = ${comp.ast.lineno}\n`+
 prefix+`$B.make_f_code(frame, [${varnames}])\n`+
@@ -18248,14 +18283,69 @@ return js}
 $B.ast.FunctionDef.prototype._check=function(){for(var arg of this.args.args){if(arg instanceof $B.ast.arg){if(arg.arg=='__debug__'){compiler_error(arg,'cannot assign to __debug__')}}}
 for(var arg of this.args.kwonlyargs){if(arg instanceof $B.ast.arg){if(arg.arg=='__debug__'){compiler_error(arg,'cannot assign to __debug__')}}}
 if(this.args.kwarg && this.args.kwarg.arg=='__debug__'){compiler_error(this.args.kwarg,'cannot assign to __debug__')}}
+function genexpr_iterator(genexpr,scopes,comp,head,outmost_expr){
+var id=comp.id,clauses=genexpr.generators,last=clauses.length-1
+var js=prefix+`var iterators_${id} = [],\n`+
+prefix+tab+tab+`level_${id} = 0\n`+
+prefix+`var gen${id} = $B.generator.$iterator(function() {\n`
+indent()
+js+=prefix+`if ($B.tracefunc !== _b_.None) {\n`+
+prefix+tab+`$B.enter_frame(frame, __file__, ${genexpr.lineno})\n`+
+prefix+`}\n`+
+prefix+`if (iterators_${id}.length == 0) {\n`+
+prefix+tab+`iterators_${id}.push(next_func_${id})\n`+
+prefix+`}\n`+
+prefix+`while (true) {\n`
+indent()
+js+=prefix+`var next_${id} = iterators_${id}[level_${id}].next()\n`+
+prefix+`if (next_${id}.done) {\n`+
+prefix+tab+`if (level_${id} == 0) {\n`+
+prefix+tab+tab+`return next_${id}\n`+
+prefix+tab+`}\n`+
+prefix+tab+`level_${id}--\n`+
+prefix+tab+`continue\n`+
+prefix+`}\n`+
+prefix+`switch (level_${id}) {\n`
+for(var[level,clause]of clauses.entries()){js+=prefix+tab+`case ${level}:\n`
+indent(2)
+js+=prefix+`var item_${id} = next_${id}.value\n`
+var name=new $B.ast.Name(`item_${id}`,new $B.ast.Load())
+copy_position(name,level==0 ? clause.iter :clause.target)
+name.to_js=function(){return `item_${id}`}
+var assign=new $B.ast.Assign([clause.target],name)
+if(level==0){assign.lineno=genexpr.lineno}else{
+copy_position(assign,clause.target)}
+js+=assign.to_js(scopes)+'\n'
+for(let _if of clause.ifs){js+=prefix+`if (! $B.$bool(${$B.js_from_ast(_if, scopes)})) {\n`+
+prefix+tab+`continue\n`+
+prefix+`}\n`}
+if(level < last){var next_clause=clauses[level+1]
+js+=prefix+`iterators_${id}[++level_${id}] = $B.make_js_iterator(`+
+`${$B.js_from_ast(next_clause.iter, scopes)}, frame, ${next_clause.lineno})\n`+
+prefix+`continue\n`}else{
+js+=prefix+`return {done: false, value: ${$B.js_from_ast(genexpr.elt, scopes)}}\n`}
+dedent(2)}
+js+=prefix+`}\n`
+dedent()
+js+=prefix+`}\n`
+dedent()
+js+=prefix+`}, "<genexpr>")\n`+
+prefix+`gen${id}.$frame = frame\n`
+scopes.pop()
+var func=`${head}\n${js}\n`+prefix+`return gen${id}`
+dedent()
+return prefix+`(function(expr) {\n${func}\n`+
+prefix+`})(${outmost_expr})\n`}
 $B.ast.GeneratorExp.prototype.to_js=function(scopes){var id=make_id(),symtable_block=scopes.symtable.table.blocks.get(fast_id(this)),varnames=symtable_block.varnames.map(x=> `"${x}"`)
 var first_for=this.generators[0],
 outmost_expr=$B.js_from_ast(first_for.iter,scopes),nb_paren=1
 var comp_scope=new Scope(`genexpr_${id}`,'comprehension',this)
 scopes.push(comp_scope)
-var comp={ast:this,id,type:'genexpr',varnames,module_name:scopes[0].name,locals_name:make_scope_name(scopes),globals_name:make_globals_name(scopes)}
+var comp={ast:this,id,type:'genexpr',varnames,module_name:scopes[0].name,locals_name:make_scope_name(scopes),globals_name:make_globals_name(scopes),as_iterator:! symtable_block.coroutine &&
+!(this.elt instanceof $B.ast.Starred)}
 indent()
 var head=init_comprehension(comp,scopes)
+if(comp.as_iterator){return genexpr_iterator(this,scopes,comp,head,outmost_expr)}
 var factory_prefix=prefix,entered=`\u0001enter_frame_${id}\u0001`,js=''
 var first=this.generators[0]
 indent()

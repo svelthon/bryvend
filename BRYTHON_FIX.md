@@ -1,7 +1,7 @@
 # Patches applied to the vendored Brython
 
 `brython_runtime.js` and `brython_compiler.js` are cut from one bundle, built
-from Brython's master of 11 September 2026 plus two hundred and seventy-one proposed commits
+from Brython's master of 11 September 2026 plus two hundred and seventy-seven proposed commits
 (`metaclass-getattribute-args`, `iterator-setstate` and `getitem-binding` in two, as amended for their PRs), nine merged
 upstream since (#3022, #2996, #2989, #2982, #3125, #3047, #3119, #3072, and master's `3afab4451`), and a hundred and
 three of mine merged upstream between 12 September and 14 October that the bundle had missed, carried as master holds
@@ -246,6 +246,12 @@ written against:
 | `async-comprehension` | an `async for` in a list, set or dict comprehension awaits each value, as the statement does, where it walked the object synchronously: `[c async for c in stream]` gave `[]` on a JavaScript stream and raised `TypeError` on an asynchronous generator. A generator expression that awaits is an asynchronous generator, allowed outside an `async def`; a comprehension that awaits elsewhere is refused as CPython refuses it |
 | `unicode-algorithmic-names` | `\N{CJK UNIFIED IDEOGRAPH-4E2D}` and `\N{HANGUL SYLLABLE GA}` are read by the names Unicode gives by rule, as `unicodedata.lookup()` computes them, where both were refused as unknown; a `\N` with no name after it is refused, where it was kept as written |
 | `fstring-escape-errors` | in an f-string, a backslash before a brace is kept, `f"\{x}"` is `\1`, where it was `1`; a truncated hexadecimal escape, `f"\xZZ{x}"`, raises CPython's `SyntaxError` at its line, where the code generated from it failed |
+| `generator-fast-iteration` | a `for` loop, `list()` or `tuple()` over a generator resumes it directly, where each value cost a `__next__` call and its end a `StopIteration` raised and caught; `next()` and `send()` answer as before |
+| `builtin-iterators-fast` | a list, tuple, range or str iterator is walked by a `for` loop without a `__next__` call and a `StopIteration` for each value; `next()` called inside the loop, a list growing while it is walked, a range past 2**53 and a character past U+FFFF keep their meaning |
+| `all-raises` | `all()` raises what its iterable raises, where it answered `True`: an exception in a generator was taken for its end |
+| `genexpr-iterator` | a generator expression without `await` is compiled to an iterator, not a JavaScript generator, so each value goes without the generator's machinery; one that awaits is still an asynchronous generator. Here, on an older base, `dict()` takes a generator through the iteration protocol, as master does: its shortcut through the JavaScript generator, which master no longer has, failed on the iterator |
+| `sum-iteration` | `sum()` takes its items as a `for` loop does, without a `next()` and a `StopIteration` for each; here, the compensated sum of floats keeps its stages |
+| `str-join-iteration` | `str.join()` takes its items as a `for` loop does: any iterable, all its items taken before they are checked, so what the iteration raises goes on before a wrong item is refused |
 
 It used to be ten. Eight went upstream, one branch each, and the re-vendoring of
 2026-09-11 took them back as ordinary Brython:
