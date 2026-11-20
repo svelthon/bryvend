@@ -17298,8 +17298,10 @@ prefix+`$B.make_f_code(frame, [${varnames}])\n`+
 prefix+`var next_func_${comp.id} = $B.make_js_iterator(expr, frame, ${comp.ast.lineno})\n`)+
 prefix+`frame.$f_trace = _b_.None\n`+
 prefix+`var _frame_obj = $B.frame_obj\n`}
-function make_comp(scopes){
+function make_comp(scopes,consumed){
 var plen=prefix.length
+var kind=consumed ??(this instanceof $B.ast.ListComp ? 'list' :
+this instanceof $B.ast.SetComp ? 'set' :'dict')
 var id=make_id(),type=this.constructor.$name,symtable_block=scopes.symtable.table.blocks.get(fast_id(this)),varnames=Object.keys($B.dict_as_jsobj(symtable_block.symbols)).map(x=> `"${x}"`)
 var first_for=this.generators[0],
 outmost_expr=$B.js_from_ast(first_for.iter,scopes),nb_paren=1
@@ -17311,7 +17313,8 @@ if(prefix.length > plen+tab.length){console.warn('JS indentation issue')}
 var js=init_comprehension(comp,scopes)
 js+=prefix+`var ${make_scope_name(scopes)} = {},\n`+
 prefix+tab+tab+`locals = ${make_scope_name(scopes)}\n`
-if(this instanceof $B.ast.ListComp){js+=prefix+`var result_${id} = $B.$list([])\n`}else if(this instanceof $B.ast.SetComp){js+=prefix+`var result_${id} = _b_.set.$factory()\n`}else if(this instanceof $B.ast.DictComp){js+=prefix+`var result_${id} = $B.empty_dict()\n`}
+if(kind=='list'){js+=prefix+`var result_${id} = $B.$list([])\n`}else if(kind=='set'){js+=prefix+`var result_${id} = _b_.set.$factory()\n`}else{
+js+=prefix+`var result_${id} = $B.empty_dict()\n`}
 var first=this.generators[0]
 js+=prefix+`try {\n`
 indent()
@@ -17329,18 +17332,26 @@ indent()}
 for(var comprehension of this.generators.slice(1)){js+=comprehension.to_js(scopes)
 nb_paren++
 for(let _if of comprehension.ifs){nb_paren++}}
-if(this instanceof $B.ast.DictComp){var key=$B.js_from_ast(this.key,scopes),value=$B.js_from_ast(this.value,scopes)}else{
+if(kind=='dict'){var key=$B.js_from_ast(this.key,scopes),value=$B.js_from_ast(this.value,scopes)}else{
 var elt=$B.js_from_ast(this.elt,scopes)}
 var has_await=comp_scope.has_await ||
 this.generators.some(generator=> generator.is_async)
 js=`(${has_await ? 'async ' : ''}function(expr) {\n`+
 (has_await ? 'var save_frame_obj = $B.frame_obj;\n' :'')+js
-if(this instanceof $B.ast.ListComp){js+=prefix+`result_${id}.push(${elt})\n`}else if(this instanceof $B.ast.SetComp){js+=prefix+`$B.set_add(result_${id}, ${elt})\n`}else if(this instanceof $B.ast.DictComp){js+=prefix+`_b_.dict.$setitem(result_${id}, ${key}, ${value})\n`}
+if(kind=='list'){js+=prefix+`result_${id}.push(${elt})\n`}else if(kind=='set'){js+=prefix+`$B.set_add(result_${id}, ${elt})\n`}else{
+js+=prefix+`_b_.dict.$setitem(result_${id}, ${key}, ${value})\n`}
 dedent()
 for(var i=0;i < nb_paren;i++){js+=prefix+'}\n'
 dedent()}
 js+=prefix+`} catch (err) {\n`
 indent()
+if(consumed){
+js+=prefix+`if ($B.is_exc(err, _b_.StopIteration)) {\n`+
+prefix+tab+`var exc_${id} = $B.EXC(_b_.RuntimeError, `+
+`"generator raised StopIteration")\n`+
+prefix+tab+`exc_${id}.__cause__ = $B.exception(err)\n`+
+prefix+tab+`err = exc_${id}\n`+
+prefix+`}\n`}
 js+=(has_await ? prefix+`$B.restore_frame_obj(save_frame_obj, ${comp.locals_name})\n` :'')+
 prefix+`$B.set_exc(err, frame)\n`+
 prefix+`throw err\n`
@@ -17692,13 +17703,29 @@ for(var scope of scopes.slice().reverse()){if(is_loop(scope.ast)){js+=prefix+`no
 break}}
 js+=prefix+`break`
 return js}
+var CONSUMERS={'_b_.tuple':'list','_b_.list':'list','_b_.sorted':'list','_b_.set':'set','_b_.frozenset':'set'}
+var FRAME_READERS=new Set(['locals','vars','dir','eval','exec','super'])
+function reads_frame(node){if(node instanceof $B.ast.Name){return FRAME_READERS.has(node.id)}
+for(var field of node.constructor._fields ??[]){var value=node[field]
+for(var item of Array.isArray(value)? value :[value]){if(item?.constructor?._fields !==undefined && reads_frame(item)){return true}}}
+return false}
+function consumed_genexpr(call,scopes){if(call.args.length !=1 ||call.keywords.length > 0 ||
+!(call.args[0]instanceof $B.ast.GeneratorExp)){return false}
+var block=scopes.symtable.table.blocks.get(fast_id(call.args[0]))
+return ! block.coroutine && ! reads_frame(call.args[0])}
 $B.ast.Call.prototype.to_js=function(scopes){compiler_check(this)
 var inum=add_to_positions(scopes,this)
 var js
 if(this.func instanceof $B.ast.Attribute){var attr=mangle(scopes,last_scope(scopes),this.func.attr)
-js=`$B.call_attr(${$B.js_from_ast(this.func.value, scopes)}, `+
-`'${attr}', ${inum}, `}else{
+var obj=$B.js_from_ast(this.func.value,scopes)
+if(attr=='join' && this.func.value instanceof $B.ast.Constant &&
+typeof this.func.value.value=='string' &&
+consumed_genexpr(this,scopes)){return `$B.call_attr(${obj}, 'join', ${inum}, `+
+`${make_comp.bind(this.args[0])(scopes, 'list')})`}
+js=`$B.call_attr(${obj}, '${attr}', ${inum}, `}else{
 var func=$B.js_from_ast(this.func,scopes)
+if(Object.hasOwn(CONSUMERS,func)&& consumed_genexpr(this,scopes)){return `$B.$call_with_position(${func}, ${inum}, `+
+`${make_comp.bind(this.args[0])(scopes, CONSUMERS[func])})`}
 js=`$B.$call_with_position(${func}, ${inum}, `}
 var args=make_args.bind(this)(scopes)
 return js+`${args})`}
