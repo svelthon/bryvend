@@ -17304,25 +17304,52 @@ var kind=consumed ??(this instanceof $B.ast.ListComp ? 'list' :
 this instanceof $B.ast.SetComp ? 'set' :'dict')
 var id=make_id(),type=this.constructor.$name,symtable_block=scopes.symtable.table.blocks.get(fast_id(this)),varnames=Object.keys($B.dict_as_jsobj(symtable_block.symbols)).map(x=> `"${x}"`)
 var first_for=this.generators[0],
-outmost_expr=$B.js_from_ast(first_for.iter,scopes),nb_paren=1
+fused=fusable(first_for,scopes)? first_for.iter :undefined,
+outmost_expr=$B.js_from_ast((fused ?? this).generators[0].iter,scopes),nb_paren=1
 var comp={ast:this,id,type,varnames,module_name:scopes[0].name,locals_name:make_scope_name(scopes),globals_name:make_globals_name(scopes)}
 var comp_scope=new Scope(`${type.toLowerCase()}_${id}`,'comprehension',this)
 scopes.push(comp_scope)
 indent()
 if(prefix.length > plen+tab.length){console.warn('JS indentation issue')}
 var js=init_comprehension(comp,scopes)
-js+=prefix+`var ${make_scope_name(scopes)} = {},\n`+
-prefix+tab+tab+`locals = ${make_scope_name(scopes)}\n`
+var own_locals=make_scope_name(scopes)
+js+=prefix+`var ${own_locals} = {},\n`+
+prefix+tab+tab+`locals = ${own_locals}\n`
+if(fused){
+scopes.pop()
+var fused_scope=new Scope(`genexpr_${id}`,'comprehension',fused)
+scopes.push(fused_scope)
+var fused_locals=make_scope_name(scopes)
+scopes.pop()
+scopes.push(comp_scope)
+js+=prefix+`var ${fused_locals} = {},\n`+
+prefix+tab+tab+`in_genexpr_${id} = false\n`}
 if(kind=='list'){js+=prefix+`var result_${id} = $B.$list([])\n`}else if(kind=='set'){js+=prefix+`var result_${id} = _b_.set.$factory()\n`}else{
 js+=prefix+`var result_${id} = $B.empty_dict()\n`}
 var first=this.generators[0]
 js+=prefix+`try {\n`
 indent()
+if(fused){js+=prefix+`try {\n`
+indent()}
 js+=comprehension_loop(id,first.is_async)
 indent()
 var name=new $B.ast.Name(`next_${id}`,new $B.ast.Load())
 copy_position(name,first_for.iter)
 name.to_js=function(){return `next_${id}`}
+if(fused){
+js+=prefix+`locals = ${fused_locals}; in_genexpr_${id} = true\n`
+scopes.pop()
+scopes.push(fused_scope)
+var fused_assign=new $B.ast.Assign([fused.generators[0].target],name)
+fused_assign.lineno=fused.lineno
+js+=fused_assign.to_js(scopes)+'\n'
+js+=prefix+`var value_${id} = ${$B.js_from_ast(fused.elt, scopes)}\n`
+scopes.pop()
+scopes.push(comp_scope)
+js+=prefix+`locals = ${own_locals}; in_genexpr_${id} = false\n`
+name=new $B.ast.Name(`value_${id}`,new $B.ast.Load())
+copy_position(name,fused.elt)
+name.to_js=function(){return `value_${id}`}}
 var assign=new $B.ast.Assign([first.target],name)
 assign.lineno=this.lineno
 js+=assign.to_js(scopes)+'\n'
@@ -17342,6 +17369,19 @@ if(kind=='list'){js+=prefix+`result_${id}.push(${elt})\n`}else if(kind=='set'){j
 js+=prefix+`_b_.dict.$setitem(result_${id}, ${key}, ${value})\n`}
 dedent()
 for(var i=0;i < nb_paren;i++){js+=prefix+'}\n'
+dedent()}
+if(fused){
+js+=prefix+`} catch (err) {\n`
+indent()
+js+=prefix+`if (in_genexpr_${id} && $B.is_exc(err, _b_.StopIteration)) {\n`+
+prefix+tab+`var exc_${id} = $B.EXC(_b_.RuntimeError, `+
+`"generator raised StopIteration")\n`+
+prefix+tab+`exc_${id}.__cause__ = $B.exception(err)\n`+
+prefix+tab+`throw exc_${id}\n`+
+prefix+`}\n`+
+prefix+`throw err\n`
+dedent()
+js+=prefix+`}\n`
 dedent()}
 js+=prefix+`} catch (err) {\n`
 indent()
@@ -17364,6 +17404,11 @@ js+=prefix+`}`+`)(${outmost_expr})\n`
 scopes.pop()
 if(has_await){await_comprehension(this,scopes)}
 return has_await ? `(await ${js})` :js}
+function fusable(first_for,scopes){var inner=first_for.iter
+if(!(inner instanceof $B.ast.GeneratorExp)||first_for.is_async ||
+inner.generators.length !=1 ||inner.generators[0].ifs.length > 0){return false}
+var block=scopes.symtable.table.blocks.get(fast_id(inner))
+return ! block.coroutine && ! reads_frame(inner)}
 function init_scopes(type,scopes){
 var filename=scopes?.symtable?.table?.filename,name=$B.url2name[filename]
 if(name){name=name.replace(/-/g,'_')}else if(filename===undefined){name='exec' }else if(filename.startsWith('<')&& filename.endsWith('>')){name='exec'}else{
