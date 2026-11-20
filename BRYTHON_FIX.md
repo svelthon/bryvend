@@ -1,7 +1,7 @@
 # Patches applied to the vendored Brython
 
 `brython_runtime.js` and `brython_compiler.js` are cut from one bundle, built
-from Brython's master of 11 September 2026 plus two hundred and seventy-seven proposed commits
+from Brython's master of 11 September 2026 plus two hundred and seventy-eight proposed commits
 (`metaclass-getattribute-args`, `iterator-setstate` and `getitem-binding` in two, as amended for their PRs), nine merged
 upstream since (#3022, #2996, #2989, #2982, #3125, #3047, #3119, #3072, and master's `3afab4451`), and a hundred and
 three of mine merged upstream between 12 September and 14 October that the bundle had missed, carried as master holds
@@ -252,6 +252,7 @@ written against:
 | `genexpr-iterator` | a generator expression without `await` is compiled to an iterator, not a JavaScript generator, so each value goes without the generator's machinery; one that awaits is still an asynchronous generator. Here, on an older base, `dict()` takes a generator through the iteration protocol, as master does: its shortcut through the JavaScript generator, which master no longer has, failed on the iterator |
 | `sum-iteration` | `sum()` takes its items as a `for` loop does, without a `next()` and a `StopIteration` for each; here, the compensated sum of floats keeps its stages |
 | `str-join-iteration` | `str.join()` takes its items as a `for` loop does: any iterable, all its items taken before they are checked, so what the iteration raises goes on before a wrong item is refused |
+| `js-constructor-identity` | a native constructor is one Python function whatever object it was read off, since it reads no receiver: `window.Map.new().constructor is window.Map`, where each receiver had its own function |
 
 It used to be ten. Eight went upstream, one branch each, and the re-vendoring of
 2026-09-11 took them back as ordinary Brython:

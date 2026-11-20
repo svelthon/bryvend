@@ -13079,6 +13079,10 @@ const PYOBJ=$B.PYOBJ=Symbol('PYOBJ')
 const PYOBJ_MAP=$B.PYOBJ_MAP=new WeakMap()
 const JS_FUNCTIONS=new WeakMap()
 const JS_METHODS=new WeakMap()
+function native_constructor(func){var proto=Object.getOwnPropertyDescriptor(func,'prototype')?.value
+return typeof proto=='object' && proto !==null &&
+Reflect.ownKeys(proto).some(key=> key !=='constructor')&&
+/\{\s*\[native code\]\s*\}$/.test(Function.prototype.toString.call(func))}
 function*f(){}
 var Generator=Object.getPrototypeOf(f())
 var JSGenerator=$B.make_builtin_class('JavascriptGenerator')
@@ -13113,7 +13117,7 @@ if(jsobj instanceof Promise ||typeof then?.value=="function"){return jsobj}
 if(typeof jsobj==="function"){
 if(jsobj.ob_type !==undefined){return jsobj}
 if(JS_CLASSES.has(jsobj)||$B.is_js_class(jsobj)){return jsclass2pyclass(jsobj)}
-_this=_this===undefined ? null :_this
+_this=_this===undefined ||native_constructor(jsobj)? null :_this
 let made
 if(_this===null){made=JS_FUNCTIONS}else if(typeof _this==='object' ||typeof _this==='function'){made=JS_METHODS.get(_this)
 if(made===undefined){made=new WeakMap()
