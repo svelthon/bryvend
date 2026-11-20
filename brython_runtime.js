@@ -1573,7 +1573,15 @@ return $B.EXC(_b_.TypeError,msg)}
 $B.unexpected_keyword=unexpected_keyword
 var empty={empty:true}
 $B.args=function(fname,argcount,slots,args,$dobj,vararg,kwarg,nb_posonly){
-var nb_posonly=nb_posonly ||0,var_names=Object.keys(slots),nb_kwonly=var_names.length-argcount,defaults=[],kwdefaults=$B.empty_dict()
+var var_names=Object.keys(slots)
+if(! vararg && ! kwarg && var_names.length==argcount &&
+args.length <=argcount){for(var i=0;i < argcount;i++){if(i < args.length){var arg=args[i]
+if(arg && arg[$B.KW]){break}
+if(arg && $B.get_class(arg)===$B.generator){slots.$has_generators=true}
+slots[var_names[i]]=arg}else if($dobj && Object.hasOwn($dobj,var_names[i])){slots[var_names[i]]=$dobj[var_names[i]]}else{
+break}}
+if(i==argcount){return slots}}
+var nb_posonly=nb_posonly ||0,nb_kwonly=var_names.length-argcount,defaults=[],kwdefaults=$B.empty_dict()
 if($dobj){for(var i=0,len=var_names.length;i < len;i++){var var_name=var_names[i]
 if(Object.hasOwn($dobj,var_name)){if(i < argcount){defaults.push($dobj[var_name])}else{
 $B.str_dict_set(kwdefaults,var_name,$dobj[var_name])}}}}
@@ -2014,7 +2022,9 @@ if($B.is_or_equals(key,item)){return true}}catch(err){if($B.$is_exc(err,[_b_.Sto
 throw err}}}}else{
 $B.RAISE(_b_.TypeError,'argument of type '+
 `'${$B.class_name(obj)}' is not iterable`)}}}
-$B.$is_member=function(item,_set){var contains=$B.$getattr($B.get_class(_set),'__contains__',$B.NULL)
+$B.$is_member=function(item,_set){var klass=$B.get_class(_set)
+if($B.is_builtin_type(klass)&& typeof klass.sq_contains=='function'){return klass.sq_contains(_set,item)}
+var contains=$B.$getattr(klass,'__contains__',$B.NULL)
 if(contains===$B.NULL){let it
 try{
 it=$B.make_js_iterator(_set)}catch(err){$B.RAISE(_b_.TypeError,`argument of type '${$B.class_name(_set)}' `+
@@ -2197,6 +2207,10 @@ if(x !==null && $B.is_type(x)&& $B.get_class(x)===_b_.type){if(op=="__eq__"){ret
 $B.RAISE(_b_.TypeError,"'"+method2comp[op]+
 "' not supported between instances of '"+$B.class_name(x)+
 "' and '"+$B.class_name(y)+"'")}}
+var klass=$B.get_class(x)
+if(klass===$B.get_class(y)&& $B.is_builtin_type(klass)&&
+typeof klass.tp_richcompare=='function'){res=klass.tp_richcompare(x,y,op)
+if(res !==_b_.NotImplemented){return res}}
 var rev_op=reversed_op[op]||op,y_rev_func
 if(typeof x?.ob_type?.tp_name=="string" &&
 typeof y?.ob_type?.tp_name=="string"){
@@ -5280,8 +5294,8 @@ var obj_class=$B.get_class(obj)
 if(obj_class===cls){return true}
 var mro=$B.get_mro(obj_class)
 if(mro){for(var i=0;i < mro.length;i++){if(mro[i]===cls){return true}}}
-var instancecheck=$B.type_getattribute($B.get_class(cls),'__instancecheck__',$B.NULL)
-if(instancecheck !==$B.NULL){if(instancecheck.method !==_b_.type.tp_funcs.__instancecheck__){return $B.$call(instancecheck,cls,obj)}}
+if(klass !==_b_.type){var instancecheck=$B.type_getattribute(klass,'__instancecheck__',$B.NULL)
+if(instancecheck !==$B.NULL){if(instancecheck.method !==_b_.type.tp_funcs.__instancecheck__){return $B.$call(instancecheck,cls,obj)}}}
 if($B.search_in_mro(obj_class,'__class__',$B.NULL)!==
 $B.search_in_dict(_b_.object,'__class__',$B.NULL)){var reported=$B.$getattr(obj,'__class__',$B.NULL)
 if(reported !==$B.NULL && reported !==obj_class &&

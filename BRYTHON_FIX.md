@@ -1,7 +1,7 @@
 # Patches applied to the vendored Brython
 
 `brython_runtime.js` and `brython_compiler.js` are cut from one bundle, built
-from Brython's master of 11 September 2026 plus two hundred and seventy-eight proposed commits
+from Brython's master of 11 September 2026 plus two hundred and eighty-two proposed commits
 (`metaclass-getattribute-args`, `iterator-setstate` and `getitem-binding` in two, as amended for their PRs), nine merged
 upstream since (#3022, #2996, #2989, #2982, #3125, #3047, #3119, #3072, and master's `3afab4451`), and a hundred and
 three of mine merged upstream between 12 September and 14 October that the bundle had missed, carried as master holds
@@ -253,6 +253,10 @@ written against:
 | `sum-iteration` | `sum()` takes its items as a `for` loop does, without a `next()` and a `StopIteration` for each; here, the compensated sum of floats keeps its stages |
 | `str-join-iteration` | `str.join()` takes its items as a `for` loop does: any iterable, all its items taken before they are checked, so what the iteration raises goes on before a wrong item is refused |
 | `js-constructor-identity` | a native constructor is one Python function whatever object it was read off, since it reads no receiver: `window.Map.new().constructor is window.Map`, where each receiver had its own function |
+| `args-positional-fast` | the arguments of a builtin given by position, none in excess and no keyword-only parameter, go to their slots, a missing one to its default, without the general parser; a keyword, or a missing argument with no default, still goes through it |
+| `contains-slot` | `in` on a builtin container asks its contains slot, which no class can override, without looking up `__contains__`; a subclass still has its own looked up |
+| `rich-compare-slot` | two objects of one builtin type are compared by the type's comparison slot, which no class can override, before the reflected and the direct method are looked up; `NotImplemented` from it goes on to them |
+| `isinstance-type-metaclass` | `isinstance()` does not look up `__instancecheck__` on a class whose metaclass is `type`, whose own is the check already made. Here, on an older base, a metaclass's `__instancecheck__` is still called with the class, as before: master's call of one already bound is not carried |
 
 It used to be ten. Eight went upstream, one branch each, and the re-vendoring of
 2026-09-11 took them back as ordinary Brython:
