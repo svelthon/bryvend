@@ -4,11 +4,12 @@
 from Brython's master of 11 September 2026 plus two hundred and eighty-four proposed commits
 (`metaclass-getattribute-args`, `iterator-setstate` and `getitem-binding` in two, as amended for their PRs), nine merged
 upstream since (#3022, #2996, #2989, #2982, #3125, #3047, #3119, #3072, and master's `3afab4451`), and a hundred and
-three of mine merged upstream between 12 September and 14 October that the bundle had missed, carried as master holds
+four of mine merged upstream between 12 September and 14 October that the bundle had missed, carried as master holds
 them: the modulo and the floor division of a float, the concatenation and the slice of a list or tuple subclass, an
 `__index__` as a subscript, `None` and the order of a union, `delattr` answering `None`, the sign and the padding of an
 integer format, a `__call__` that is a descriptor, the arguments of the `Unicode*Error`s, a named escape in an f-string,
-the docstrings of the builtins, and the like. Two of that span are left out, which master carries along with later
+the docstrings of the builtins, a metaclass's `__instancecheck__` or `__subclasscheck__` written as a classmethod, and
+the like. Two of that span are left out, which master carries along with later
 changes of its own: the module prefix of a `GenericAlias`'s repr and an explicit `__module__` kept in a class body, each
 of which failed a test of the suite here. With **three** edits made in the file itself afterwards: the wrapper carries a
 `/* BRYVEND patch, see BRYTHON_FIX.md */` comment, the only way to find it again in 1.4 MB; `@vite-ignore` *is* a
@@ -256,7 +257,7 @@ written against:
 | `args-positional-fast` | the arguments of a builtin given by position, none in excess and no keyword-only parameter, go to their slots, a missing one to its default, without the general parser; a keyword, or a missing argument with no default, still goes through it |
 | `contains-slot` | `in` on a builtin container asks its contains slot, which no class can override, without looking up `__contains__`; a subclass still has its own looked up |
 | `rich-compare-slot` | two objects of one builtin type are compared by the type's comparison slot, which no class can override, before the reflected and the direct method are looked up; `NotImplemented` from it goes on to them |
-| `isinstance-type-metaclass` | `isinstance()` does not look up `__instancecheck__` on a class whose metaclass is `type`, whose own is the check already made. Here, on an older base, a metaclass's `__instancecheck__` is still called with the class, as before: master's call of one already bound is not carried |
+| `isinstance-type-metaclass` | `isinstance()` does not look up `__instancecheck__` on a class whose metaclass is `type`, whose own is the check already made |
 | `genexpr-consumed` | a generator expression handed alone to `list()`, `tuple()`, `sorted()`, `set()`, `frozenset()` or a string literal's `join()` is built as the list or set comprehension it reads as, with no generator; a `StopIteration` it raises is still a `RuntimeError`, and one that awaits or reads its frame (`locals()`, `super()`…) stays a generator. Here, on an older base, the comprehension keeps its form without master's starred element |
 | `genexpr-fusion` | a generator expression a comprehension reads first, one `for` and no `if` in it, no `await` and no read of its frame, runs its loop as the comprehension's own: no generator, each value handed straight to the comprehension's target; its names stay in a namespace of their own, and a `StopIteration` raised in it is still a `RuntimeError`, one the comprehension raises going on. It reads its frame by the check `genexpr-consumed` brings, which the branch alone does not carry |
 

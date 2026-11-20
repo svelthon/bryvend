@@ -5295,7 +5295,9 @@ if(obj_class===cls){return true}
 var mro=$B.get_mro(obj_class)
 if(mro){for(var i=0;i < mro.length;i++){if(mro[i]===cls){return true}}}
 if(klass !==_b_.type){var instancecheck=$B.type_getattribute(klass,'__instancecheck__',$B.NULL)
-if(instancecheck !==$B.NULL){if(instancecheck.method !==_b_.type.tp_funcs.__instancecheck__){return $B.$call(instancecheck,cls,obj)}}}
+if(instancecheck !==$B.NULL){if(instancecheck.method !==_b_.type.tp_funcs.__instancecheck__){if(instancecheck.im_self !==undefined){
+return $B.$call(instancecheck,obj)}
+return $B.$call(instancecheck,cls,obj)}}}
 if($B.search_in_mro(obj_class,'__class__',$B.NULL)!==
 $B.search_in_dict(_b_.object,'__class__',$B.NULL)){var reported=$B.$getattr(obj,'__class__',$B.NULL)
 if(reported !==$B.NULL && reported !==obj_class &&
@@ -5322,6 +5324,8 @@ return $B.get_mro(cls).indexOf(_class)>-1}
 var sch=$B.type_getattribute($B.get_class(_class),'__subclasscheck__',$B.NULL)
 if(sch===$B.NULL){$B.RAISE(_b_.TypeError,"issubclass() arg 2 must be a class, "+
 "a tuple of classes, or a union")}
+if(sch.im_self !==undefined){
+return $B.$call(sch,cls)}
 return $B.$call(sch,_class,cls)}
 $B.iterator.tp_iter=function(self){return self}
 $B.iterator.tp_iternext=function*(self){
