@@ -1,7 +1,7 @@
 # Patches applied to the vendored Brython
 
 `brython_runtime.js` and `brython_compiler.js` are cut from one bundle, built
-from Brython's master of 11 September 2026 plus two hundred and eighty-four proposed commits
+from Brython's master of 11 September 2026 plus two hundred and ninety proposed commits
 (`metaclass-getattribute-args`, `iterator-setstate` and `getitem-binding` in two, as amended for their PRs), nine merged
 upstream since (#3022, #2996, #2989, #2982, #3125, #3047, #3119, #3072, and master's `3afab4451`), and a hundred and
 four of mine merged upstream between 12 September and 14 October that the bundle had missed, carried as master holds
@@ -260,6 +260,12 @@ written against:
 | `isinstance-type-metaclass` | `isinstance()` does not look up `__instancecheck__` on a class whose metaclass is `type`, whose own is the check already made |
 | `genexpr-consumed` | a generator expression handed alone to `list()`, `tuple()`, `sorted()`, `set()`, `frozenset()` or a string literal's `join()` is built as the list or set comprehension it reads as, with no generator; a `StopIteration` it raises is still a `RuntimeError`, and one that awaits or reads its frame (`locals()`, `super()`…) stays a generator. Here, on an older base, the comprehension keeps its form without master's starred element |
 | `genexpr-fusion` | a generator expression a comprehension reads first, one `for` and no `if` in it, no `await` and no read of its frame, runs its loop as the comprehension's own: no generator, each value handed straight to the comprehension's target; its names stay in a namespace of their own, and a `StopIteration` raised in it is still a `RuntimeError`, one the comprehension raises going on. It reads its frame by the check `genexpr-consumed` brings, which the branch alone does not carry |
+| `js-object-refused-write` | a write Javascript refuses, a property with no setter, a read-only one or a new one on a frozen object, is an `AttributeError`, where it was a `JavascriptError`; a `TypeError` of another context is one too |
+| `js-object-str` | `str()` of a Javascript object is what its own `toString` makes, a URL its address, a Date its date, an Error its message; repr() for one whose `toString` is Object's, in any context, or an array |
+| `js-generator-methods` | a Javascript generator keeps `next()`, `return()` and `throw()`, where `for` and `list()` alone reached it |
+| `descriptor-receiver` | a method or a slot of a builtin type a class of another kind borrows, `__getitem__ = list.__getitem__`, raises `TypeError` when bound to its instance, as CPython's `descr_check` does, where `X()[0]` ran the list's and said "index out of range" |
+| `rich-compare-typeerror` | a comparison finding no method raises `TypeError`, where a typo named an undefined variable |
+| (on this base) | a method a class derived in Python has in common with its Javascript base is the redefinition for Javascript too, a method of the base calling `this.set()` included; `super()` reaches the base's on its prototype, and `Cls.new()` makes the derived instance, where it made the base's |
 
 It used to be ten. Eight went upstream, one branch each, and the re-vendoring of
 2026-09-11 took them back as ordinary Brython:

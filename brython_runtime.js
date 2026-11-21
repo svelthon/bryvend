@@ -2218,7 +2218,7 @@ if($B.get_mro(y.ob_type).indexOf(x.ob_type)>-1){y_rev_func=$B.$getattr($B.get_cl
 res=$B.$call(y_rev_func,y,x)
 if(res !==_b_.NotImplemented){return res}}}
 var in_mro=$B.search_in_mro($B.get_class(x),op)
-if(in_mro===undefined){$B.RAISE(_b_TypeError,`no attribute ${op}`)}
+if(in_mro===undefined){$B.RAISE(_b_.TypeError,`no attribute ${op}`)}
 var getter=$B.get_class(in_mro).tp_descr_get
 if(getter){var comp_func=getter(in_mro,x)
 res=$B.$call(comp_func,y)}else{
@@ -3823,17 +3823,20 @@ $B.set_func_names(method,"builtins")
 $B.method_descriptor.tp_repr=function(self){var name=self.d_name
 var class_name=self.d_type.tp_name
 return `<method '${name}' of '${class_name}' objects>`}
+function check_receiver(self,obj){var klass=$B.get_class(obj)
+if(klass !==self.d_type && ! $B.get_mro(klass).includes(self.d_type)){$B.RAISE(_b_.TypeError,`descriptor '${self.d_name}' for `+
+`'${$B.get_name(self.d_type)}' objects doesn't apply to a `+
+`'${$B.class_name(obj)}' object`)}}
 $B.method_descriptor.tp_call=function(self,...args){if(args.length==0){var name=self.d_name
 var class_name=self.d_type.tp_name
 $B.RAISE(_b_.TypeError,`unbound method ${class_name}.${name} needs an argument`
 )}
-if(! $B.get_mro($B.get_class(args[0])).includes(self.d_type)){$B.RAISE(_b_.TypeError,`descriptor '${self.d_name}' for `+
-`'${$B.get_name(self.d_type)}' objects doesn't apply to a `+
-`'${$B.class_name(args[0])}' object`)}
+check_receiver(self,args[0])
 try{
 var res=self.method(...args)
 return res}catch(err){throw err}}
 $B.method_descriptor.tp_descr_get=function(self,obj,klass){if(obj===$B.NULL){return self}
+check_receiver(self,obj)
 var f=self.method.bind(null,obj)
 f.ob_type=$B.builtin_method
 f.$infos=self.$infos
@@ -3916,6 +3919,7 @@ if(! _b_.issubclass($B.get_class(self),descr.d_type)){$B.RAISE(_b_.TypeError,`de
 )}
 return descr.wrapped(...args)}
 $B.wrapper_descriptor.tp_descr_get=function(self,obj,type){if(obj===$B.NULL){return self}
+check_receiver(self,obj)
 var res={ob_type:$B.method_wrapper,d_name:self.d_name,d_type:self.d_type,self:obj,wrapped:self.wrapped}
 return res}
 var wrapper_descriptor_funcs=$B.wrapper_descriptor.tp_funcs={}
@@ -5717,7 +5721,11 @@ for(var klass of search_classes){if($test){console.log('search',attr,'in dict of
 var in_dict=$B.search_in_dict(klass,attr,$B.NULL)
 if(in_dict !==$B.NULL){if($test){console.log('found in dict of',klass)}
 f=in_dict
-break}}
+break}
+var js_class=klass.js_class
+if(js_class !==undefined && klass.tp_bases?.length==0 &&
+typeof attr=='string' && attr in js_class.prototype){var held=self.obj?.jsobj ?? self.obj
+return $B.jsobj2pyobj(Reflect.get(js_class.prototype,attr,held),held)}}
 if(f===undefined){if($$super[attr]!==undefined){return(function(x){return function(){var args=[x]
 for(var i=0,len=arguments.length;i < len;i++){args.push(arguments[i])}
 return $$super[attr].apply(null,args)}})(self)}
@@ -13109,6 +13117,8 @@ $B.init_dict(res)
 return res}
 JSGenerator.tp_iter=function(self){return self}
 JSGenerator.tp_iternext=function*(self){for(var item of self.js_gen){yield jsobj2pyobj(item)}}
+JSGenerator.tp_getattro=function(self,attr){if(! attr.startsWith('__')&& attr in self.js_gen){return jsobj2pyobj(self.js_gen[attr],self.js_gen)}
+return _b_.object.tp_getattro(self,attr)}
 var jsobj2pyobj=$B.jsobj2pyobj=function(jsobj,_this){
 if(jsobj===null){return null}else if(jsobj===undefined){return _b_.None}
 switch(typeof jsobj){case 'boolean':
@@ -13270,8 +13280,10 @@ $B.RAISE(_b_.TypeError,"A Javascript function can't take "+
 args[i]=$B.pyobj2jsobj(arg,memo)}
 return args}
 $B.JSClass=$B.make_builtin_class('JSClass',[_b_.type])
-$B.JSClass.tp_getattro=function(self,attr){if(attr=='new'){return function(){var memo=new Map(),args=Array.from(arguments,arg=> pyobj2jsobj(arg,memo))
-return jsobj2pyobj(new self.js_class(...args))}}
+$B.JSClass.tp_getattro=function(self,attr){if(attr=='new'){
+var js_class=JS_SUBCLASSES.get(self)?? self.js_class
+return function(){var memo=new Map(),args=Array.from(arguments,arg=> pyobj2jsobj(arg,memo))
+return jsobj2pyobj(new js_class(...args))}}
 var res=_b_.type.tp_getattro(self,attr)
 if(res !==$B.NULL){return res}
 if(self.js_class[attr]===undefined){return $B.NULL}
@@ -13352,10 +13364,12 @@ function python_defines(klass,cls,name){for(var k of klass.tp_mro){if(k===cls){r
 if($B.get_from_dict(k,name,$B.NULL)!==$B.NULL){return true}}
 return false}
 function define_accessor(made,klass,name){if(typeof name !='string' ||name.startsWith('__')||
-name in made.prototype){return}
+name=='constructor' ||Object.hasOwn(made.prototype,name)){return}
+var base=Object.getPrototypeOf(made.prototype)
 function forward(...args){if(! PYOBJ_MAP.has(this)){throw new TypeError(`${name} called on an object that is no ${klass.tp_name}`)}
 return Reflect.apply(Reflect.get(made.prototype,name,this),this,args)}
 Object.defineProperty(made.prototype,name,{configurable:true,get(){if(PYOBJ_MAP.has(this)){return pyobj2jsobj(_b_.getattr).call(undefined,this,name)}
+if(name in base){return Reflect.get(base,name,this)}
 var value=$B.$getattr(klass,name)
 return typeof value=='function' ? forward :pyobj2jsobj(value)},set(value){if(PYOBJ_MAP.has(this)){pyobj2jsobj(_b_.setattr).call(undefined,this,name,value)}else{
 Object.defineProperty(this,name,{value,writable:true,enumerable:true,configurable:true})}}})}
@@ -13531,9 +13545,24 @@ if(test){console.log('jsobj2pyobj on',js_attr)}
 var res=jsobj2pyobj(js_attr)
 if(test){console.log('    res',res)}
 return res}}
+function refused_write(self,attr,err){if(err?.name !=='TypeError'){throw err}
+var klass=$B.class_name(self)
+for(var obj=self;obj !==null;obj=Object.getPrototypeOf(obj)){var desc=Object.getOwnPropertyDescriptor(obj,attr)
+if(desc===undefined){continue}
+if(desc.set){throw err}
+if(desc.get){$B.RAISE_ATTRIBUTE_ERROR(`property '${attr}' of '${klass}' `+
+'object has no setter',self,attr)}
+if(! desc.writable){$B.RAISE_ATTRIBUTE_ERROR(`attribute '${attr}' of '${klass}' `+
+'objects is not writable',self,attr)}
+break}
+if(! Object.isExtensible(self)){$B.RAISE_ATTRIBUTE_ERROR(`'${klass}' object has no attribute `+
+`'${attr}' and no __dict__ for setting new attributes`,self,attr)}
+throw err}
 $B.JSObj.tp_setattro=function(self,attr,value){if(value===$B.NULL){delete self[attr]
 return}
-self[attr]=$B.pyobj2jsobj(value)
+var js_value=$B.pyobj2jsobj(value)
+try{
+self[attr]=js_value}catch(err){refused_write(self,attr,err)}
 return _b_.None}
 var is_typed_array=function(obj){return ArrayBuffer.isView(obj)&& !(obj instanceof DataView)}
 var typed_index=function(self,key){var rank=$B.PyNumber_Index(key)
@@ -13577,6 +13606,14 @@ var func=typeof self=='function' ? self.$js_func ?? self :undefined
 if(func && func.name && globalThis[func.name]===func){return `<function window.${func.name}>`}
 var js_repr=Object.prototype.toString.call(self)
 return `<Javascript object: ${js_repr}>`}
+function own_text(obj){if(Array.isArray(obj)||ArrayBuffer.isView(obj)){return false}
+for(var o=obj;o !==null;o=Object.getPrototypeOf(o)){var desc=Object.getOwnPropertyDescriptor(o,'toString')
+if(desc !==undefined){var objects=Object.getPrototypeOf(o)===null &&
+Object.hasOwn(o,'isPrototypeOf')
+return typeof desc.value=='function' && ! objects}}
+return false}
+$B.JSObj.tp_str=function(self){if(typeof self=='object' && self !==null && own_text(self)){return String(self)}
+return _b_.repr(self)}
 var JSObj_funcs=$B.JSObj.tp_funcs={}
 JSObj_funcs.__dir__=function(self){var attrs=Object.keys(self)
 attrs=attrs.sort()
