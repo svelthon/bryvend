@@ -4971,7 +4971,7 @@ delete frame[3][name]}}else if(locals_id !==null && locals_id[name]!==undefined)
 del(locals_id[name])
 delete locals_id[name]}
 if(! found){$B.set_inum(inum)
-if(locals_id=='local'){$B.RAISE(_b_.UnboundLocalError,`cannot access local variable '${name}' `+
+if(locals_id==='local'){$B.RAISE(_b_.UnboundLocalError,`cannot access local variable '${name}' `+
 'where it is not associated with a value')}else{
 throw $B.name_error(name)}}}
 _b_.dir=function(obj){if(obj===undefined){
@@ -13299,11 +13299,12 @@ self.js_class[attr]=pyobj2jsobj(value)}
 return _b_.None}
 var is_error_class=function(js_class){return js_class===Error ||js_class.prototype instanceof Error}
 var positional=function(args){return args[args.length-1]?.[$B.KW]===undefined ? args :args.slice(0,-1)}
-$B.JSClass.tp_new=function(cls,args,kw){var[name,bases,dict]=args
-if(is_error_class(bases[0].js_class)&&
+$B.JSClass.tp_new=function(cls,args,kw){var[name,bases,dict]=args,
+js_class=bases.find(base=> base.js_class !==undefined).js_class
+if(is_error_class(js_class)&&
 ! bases.some(base=> _b_.issubclass(base,_b_.BaseException))){args=[name,$B.fast_tuple([...bases,_b_.Exception]),dict]}
 var kls=_b_.type.tp_new(cls,args,kw)
-kls.js_class=kls.tp_bases[0].js_class
+kls.js_class=js_class
 if(! is_error_class(kls.js_class)){
 kls[JSOBJ]=js_subclass(kls,js_base(kls))}
 return kls}
@@ -13357,8 +13358,11 @@ made=class extends js_subclass(parent,cls){}}
 Object.defineProperty(made,'name',{value:klass.tp_name})
 JS_SUBCLASSES.set(klass,made)
 PYOBJ_MAP.set(made,klass)
-for(var k of klass.tp_mro){if(k===cls ||k===parent){break}
-for(var entry of _b_.dict.$iter_items($B.get_dict(k))){define_accessor(made,klass,entry.key)}}
+var above=true,inherited=(parent ?? cls).tp_mro
+for(var k of klass.tp_mro){if(k===cls ||k===parent){above=false}
+if(inherited.includes(k)){continue}
+for(var entry of _b_.dict.$iter_items($B.get_dict(k))){
+if(above ||!(entry.key in made.prototype)){define_accessor(made,klass,entry.key)}}}
 return made}
 function python_defines(klass,cls,name){for(var k of klass.tp_mro){if(k===cls){return false}
 if($B.get_from_dict(k,name,$B.NULL)!==$B.NULL){return true}}
@@ -13922,7 +13926,10 @@ Object.defineProperty(new_func,'$function_infos',{value,writable:true}
 new_func.ob_type=$B.builtin_function_or_method
 new_func.__name__='new'
 return new_func}
-$B.JSFunction.tp_methods=["__getattr__","new"]})(__BRYTHON__);
+JSFunction_funcs.__mro_entries__=function(self,bases){var js_constr=self[$B.JSOBJ]
+if(typeof js_constr?.prototype=='object' && js_constr.prototype !==null){return $B.fast_tuple([jsclass2pyclass(js_constr)])}
+return $B.fast_tuple([self])}
+$B.JSFunction.tp_methods=["__getattr__","new","__mro_entries__"]})(__BRYTHON__);
 ;
 "use strict";
 (function($B){
