@@ -1,9 +1,16 @@
 {
   "name": "bryvend",
-  "version": "3.14.3",
+  "version": "3.14.31",
   "description": "The Brython that Bryntime and Brycomp run on, with its fixes, until upstream Brython carries them",
   "author": "Florent Gallaire <fgallaire@gmail.com>",
   "license": "BSD-3-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/svelthon/bryvend.git"
+  },
+  "bugs": {
+    "url": "https://github.com/svelthon/bryvend/issues"
+  },
   "keywords": [
     "python",
     "brython"
