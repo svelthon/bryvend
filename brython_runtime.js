@@ -12349,11 +12349,9 @@ dict_funcs.fromkeys=function(){var $=$B.args("fromkeys",3,{cls:null,keys:null,va
 var keys=$.keys,value=$.value
 var cls=$.cls
 var res=$B.$call(cls),klass=$B.get_class(res),
-keys_iter=$B.$iter(keys),setitem=klass===dict ? dict.$setitem :$B.$getattr(klass,'__setitem__')
-while(1){try{
-var key=_b_.next(keys_iter)
-$B.$call(setitem,res,key,value)}catch(err){if($B.is_exc(err,[_b_.StopIteration])){return res}
-throw err}}}
+keys_iter=$B.make_js_iterator(keys,$B.NULL),setitem=klass===dict ? dict.$setitem :$B.$getattr(klass,'__setitem__')
+for(let key of keys_iter){$B.$call(setitem,res,key,value)}
+return res}
 dict_funcs.get=function(self){var $=$B.args("get",3,{self:null,key:null,_default:null},arguments,{_default:_b_.None})
 try{
 return dict.$getitem($.self,$.key,true)}catch(err){if($B.$isinstance(err,_b_.KeyError)){return $._default}else{
