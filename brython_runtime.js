@@ -14924,7 +14924,8 @@ var coroutine=$B.coroutine
 coroutine.tp_repr=function(self){if(self.$func.$function_infos){return "<coroutine "+self.$func.$function_infos[$B.func_attrs.name]+">"}else{
 return "<coroutine object>"}}
 $B.coroutine.tp_finalize=function(self){}
-$B.coroutine.am_await=function(self){}
+$B.coroutine.am_await=function(self){return{
+ob_type:$B.coroutine_wrapper,coroutine:self,state:'created'}}
 var coroutine_funcs=$B.coroutine.tp_funcs={}
 coroutine_funcs.__class_getitem__=function(self){}
 coroutine_funcs.__name___get=function(self){}
@@ -14961,6 +14962,26 @@ $B.coroutine.tp_members=[["cr_origin",$B.TYPES.OBJECT,"cr_origin_or_finalizer",1
 $B.coroutine.tp_getset=["__name__","__qualname__","cr_await","cr_running","cr_frame","cr_code","cr_suspended"
 ]
 $B.set_func_names(coroutine,"builtins")
+var coroutine_wrapper=$B.coroutine_wrapper
+coroutine_wrapper.tp_iter=function(self){return self}
+coroutine_wrapper.tp_iternext=function*(self){yield coroutine_wrapper.tp_funcs.send(self,_b_.None)}
+var coroutine_wrapper_funcs=coroutine_wrapper.tp_funcs={}
+coroutine_wrapper_funcs.send=function(self,value){switch(self.state){case 'created':
+if(value !==_b_.None){$B.RAISE(_b_.TypeError,"can't send non-None value to a just-started coroutine")}
+self.state='yielded'
+return self.coroutine
+case 'yielded':
+self.state='done'
+$B.RAISE(_b_.StopIteration,value)}
+$B.RAISE(_b_.RuntimeError,'cannot reuse already awaited coroutine')}
+coroutine_wrapper_funcs.throw=function(self,exc){if(self.state=='created'){coroutine_funcs.close(self.coroutine)}
+self.state='done'
+throw $B.is_type(exc)? $B.$call(exc):exc}
+coroutine_wrapper_funcs.close=function(self){if(self.state=='created'){coroutine_funcs.close(self.coroutine)}
+self.state='done'
+return _b_.None}
+coroutine_wrapper.tp_methods=["send","throw","close"]
+$B.set_func_names(coroutine_wrapper,"builtins")
 var unawaited=new FinalizationRegistry(function(created){var current=$B.frame_obj
 $B.frame_obj={frame:created.frame,prev:null,count:1}
 try{
@@ -14997,9 +15018,10 @@ if(obj instanceof Promise ||typeof obj.then=="function"){return[obj,true]}
 var awaitable=$B.$getattr(obj,'__await__',null)
 if(awaitable !==null){
 awaitable=$B.$call(awaitable)
-if($B.$getattr(awaitable,'__next__',null)===null){$B.RAISE(_b_.TypeError,'__await__() returned non-iterator'+
+var next_method=$B.$getattr(awaitable,'__next__',null)
+if(next_method===null){$B.RAISE(_b_.TypeError,'__await__() returned non-iterator'+
 ` of type '${$B.class_name(awaitable)}'`)}
-return[awaitable,false]}
+return[run_await(awaitable,next_method),false]}
 $B.RAISE(_b_.TypeError,`object ${$B.class_name(obj)} `+
 `can't be used in 'await' expression`)}
 $B.promise=function(obj){var frame_obj=$B.frame_obj,[awaited,from_js]=$B.awaited(obj)
@@ -15013,7 +15035,24 @@ $B.resumed=function(settled){var frame_obj=settled.frame_obj
 frame_obj.before=$B.frame_obj
 $B.frame_obj=frame_obj
 if('error' in settled){throw settled.from_js ? $B.exception(settled.error):settled.error}
-return settled.from_js ? $B.jsobj2pyobj(settled.value):settled.value}})(__BRYTHON__);
+return settled.from_js ? $B.jsobj2pyobj(settled.value):settled.value}
+async function run_await(iterator,next_method){var frame_obj=$B.frame_obj,step=()=> $B.$call(next_method)
+while(true){try{
+var yielded=step()}catch(err){$B.frame_obj=$B.stack_before(frame_obj)
+if($B.is_exc(err,[_b_.StopIteration])){return err.value}
+throw err}
+try{
+if(yielded===_b_.None){$B.frame_obj=$B.stack_before(frame_obj)
+await null
+frame_obj.before=$B.frame_obj
+$B.frame_obj=frame_obj
+var sent=_b_.None}else{
+var sent=$B.resumed(await $B.promise(yielded))}
+step=sent===_b_.None ?()=> $B.$call(next_method):
+()=> $B.$call($B.$getattr(iterator,'send'),sent)}catch(err){var thrown=$B.exception(err),throw_method=$B.$getattr(iterator,'throw',null)
+if(throw_method===null){$B.frame_obj=$B.stack_before(frame_obj)
+throw thrown}
+step=()=> $B.$call(throw_method,thrown)}}}})(__BRYTHON__);
 ;
 
 "use strict";
@@ -16847,7 +16886,7 @@ $B.set_to_dict(cls,rdunder,$B.wrapper_descriptor.$factory(
 cls,rdunder,func
 ))}}
 $B.wrapper_methods=Object.create(null)
-Object.assign($B.wrapper_methods,{am_aiter:wrap('__aiter__'),am_anext:wrap('__anext__'),bf_getbuffer:wrap('__buffer__'),bf_releasebuffer:wrap('__release_buffer__'),mp_length:wrap('__len__'),mp_subscript:wrap('__getitem__'),mp_ass_subscript:make_setitem_delitem,nb_absolute:wrap('__abs__'),nb_add:wrap_with_reflected('__add__','__radd__'),nb_and:wrap_with_reflected('__and__','__rand__'),nb_bool:wrap('__bool__'),nb_divmod:wrap_with_reflected('__divmod__','__rdivmod__'),nb_floor_divide:wrap_with_reflected('__floordiv__','__rfloordiv__'),nb_float:wrap('__float__'),nb_index:wrap('__index__'),nb_lshift:wrap_with_reflected('__lshift__','__rlshift__'),nb_inplace_add :wrap('__iadd__'),nb_inplace_and :wrap('__iand__'),nb_inplace_floor_divide :wrap('__ifloordiv__'),nb_inplace_lshift :wrap('__ilshift__'),nb_inplace_matrix_multiply :wrap('__imatmul__'),nb_inplace_multiply :wrap('__imul__'),nb_inplace_or :wrap('__ior__'),nb_inplace_remainder :wrap('__imod__'),nb_inplace_power :wrap('__ipow__'),nb_inplace_subtract :wrap('__isub__'),nb_inplace_true_divide :wrap('__itruediv__'),nb_inplace_rshift :wrap('__irshift__'),nb_inplace_xor :wrap('__ixor__'),nb_int :wrap('__int__'),nb_invert:wrap('__invert__'),nb_matrix_multiply:wrap_with_reflected('__matmul__','__rmatmul__'),nb_multiply:wrap_with_reflected('__mul__','__rmul__'),nb_negative:wrap('__neg__'),nb_or:wrap_with_reflected('__or__','__ror__'),nb_positive:wrap('__pos__'),nb_power:wrap_with_reflected('__pow__','__rpow__'),nb_remainder:wrap_with_reflected('__mod__','__rmod__'),nb_subtract:wrap_with_reflected('__sub__','__rsub__'),nb_rshift:wrap_with_reflected('__rshift__','__rrshift__'),nb_true_divide:wrap_with_reflected('__truediv__','__rtruediv__'),nb_xor:wrap_with_reflected('__xor__','__rxor__'),sq_ass_item:make_setitem_delitem,sq_concat:wrap('__add__'),sq_contains:wrap('__contains__'),sq_length:wrap('__len__'),sq_repeat:wrap_with_same_reflected('__mul__','__rmul__'),tp_call:wrap('__call__'),tp_descr_get:wrap('__get__'),tp_descr_set:make_set_del,tp_doc:make_doc,tp_getattro:make_getattribute,tp_finalize:wrap('__del__'),tp_hash:wrap('__hash__'),tp_init:wrap('__init__'),tp_iter:wrap('__iter__'),tp_iternext:make_next,tp_match_args:make_match_args,tp_new:make_new,tp_repr:wrap('__repr__',1),tp_str :wrap('__str__',1),tp_setattro:make_setattr_delattr,tp_richcompare:make_richcompare}
+Object.assign($B.wrapper_methods,{am_aiter:wrap('__aiter__'),am_anext:wrap('__anext__'),am_await:wrap('__await__'),bf_getbuffer:wrap('__buffer__'),bf_releasebuffer:wrap('__release_buffer__'),mp_length:wrap('__len__'),mp_subscript:wrap('__getitem__'),mp_ass_subscript:make_setitem_delitem,nb_absolute:wrap('__abs__'),nb_add:wrap_with_reflected('__add__','__radd__'),nb_and:wrap_with_reflected('__and__','__rand__'),nb_bool:wrap('__bool__'),nb_divmod:wrap_with_reflected('__divmod__','__rdivmod__'),nb_floor_divide:wrap_with_reflected('__floordiv__','__rfloordiv__'),nb_float:wrap('__float__'),nb_index:wrap('__index__'),nb_lshift:wrap_with_reflected('__lshift__','__rlshift__'),nb_inplace_add :wrap('__iadd__'),nb_inplace_and :wrap('__iand__'),nb_inplace_floor_divide :wrap('__ifloordiv__'),nb_inplace_lshift :wrap('__ilshift__'),nb_inplace_matrix_multiply :wrap('__imatmul__'),nb_inplace_multiply :wrap('__imul__'),nb_inplace_or :wrap('__ior__'),nb_inplace_remainder :wrap('__imod__'),nb_inplace_power :wrap('__ipow__'),nb_inplace_subtract :wrap('__isub__'),nb_inplace_true_divide :wrap('__itruediv__'),nb_inplace_rshift :wrap('__irshift__'),nb_inplace_xor :wrap('__ixor__'),nb_int :wrap('__int__'),nb_invert:wrap('__invert__'),nb_matrix_multiply:wrap_with_reflected('__matmul__','__rmatmul__'),nb_multiply:wrap_with_reflected('__mul__','__rmul__'),nb_negative:wrap('__neg__'),nb_or:wrap_with_reflected('__or__','__ror__'),nb_positive:wrap('__pos__'),nb_power:wrap_with_reflected('__pow__','__rpow__'),nb_remainder:wrap_with_reflected('__mod__','__rmod__'),nb_subtract:wrap_with_reflected('__sub__','__rsub__'),nb_rshift:wrap_with_reflected('__rshift__','__rrshift__'),nb_true_divide:wrap_with_reflected('__truediv__','__rtruediv__'),nb_xor:wrap_with_reflected('__xor__','__rxor__'),sq_ass_item:make_setitem_delitem,sq_concat:wrap('__add__'),sq_contains:wrap('__contains__'),sq_length:wrap('__len__'),sq_repeat:wrap_with_same_reflected('__mul__','__rmul__'),tp_call:wrap('__call__'),tp_descr_get:wrap('__get__'),tp_descr_set:make_set_del,tp_doc:make_doc,tp_getattro:make_getattribute,tp_finalize:wrap('__del__'),tp_hash:wrap('__hash__'),tp_init:wrap('__init__'),tp_iter:wrap('__iter__'),tp_iternext:make_next,tp_match_args:make_match_args,tp_new:make_new,tp_repr:wrap('__repr__',1),tp_str :wrap('__str__',1),tp_setattro:make_setattr_delattr,tp_richcompare:make_richcompare}
 )
 function make_doc(cls){var in_dict=$B.get_from_dict(cls,'__doc__',$B.NULL)
 if(in_dict===$B.NULL){$B.set_to_dict(cls,'__doc__',cls.tp_doc)}}
