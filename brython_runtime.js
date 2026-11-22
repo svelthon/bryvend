@@ -1813,9 +1813,13 @@ var test=false
 if(test){console.log('make js iterator',it)}
 var next_func=$B.$getattr($B.get_class(it),'__next__',null)
 if(test){console.log('next_func',next_func)}
-if(next_func !==null){return{
+if(next_func !==null){
+var native=next_func.$iternext_of
+return{
 [Symbol.iterator](){return this},next(){set_lineno(frame,lineno)
 try{
+if(native !==undefined){var res=native.tp_iternext(it).next()
+return res.done ?{done:true,value:null}:res}
 var value=$B.$call(next_func,it)
 return{done:false,value}}catch(err){if($B.is_exc(err,[_b_.StopIteration])){return{done:true,value:null}}
 if(inum){$B.set_inum(inum)}
@@ -16870,6 +16874,7 @@ var res=itn.next()
 if(res.done){$B.RAISE(_b_.StopIteration,res.value)}
 return res.value}
 next_func.ob_type=$B.function
+next_func.$iternext_of=cls
 var descr=$B.wrapper_descriptor.$factory(
 cls,'__next__',next_func
 )

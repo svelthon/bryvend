@@ -1,7 +1,7 @@
 # Patches applied to the vendored Brython
 
 `brython_runtime.js` and `brython_compiler.js` are cut from one bundle, built
-from Brython's master of 11 September 2026 plus two hundred and ninety-five proposed commits
+from Brython's master of 11 September 2026 plus two hundred and ninety-six proposed commits
 (`metaclass-getattribute-args`, `iterator-setstate` and `getitem-binding` in two, as amended for their PRs), nine merged
 upstream since (#3022, #2996, #2989, #2982, #3125, #3047, #3119, #3072, and master's `3afab4451`), and a hundred and
 four of mine merged upstream between 12 September and 14 October that the bundle had missed, carried as master holds
@@ -266,6 +266,7 @@ written against:
 | `descriptor-receiver` | a method or a slot of a builtin type a class of another kind borrows, `__getitem__ = list.__getitem__`, raises `TypeError` when bound to its instance, as CPython's `descr_check` does, where `X()[0]` ran the list's and said "index out of range" |
 | `rich-compare-typeerror` | a comparison finding no method raises `TypeError`, where a typo named an undefined variable |
 | `dict-fromkeys-iteration` | `dict.fromkeys()` iterates its keys as a loop does and lets what the class's `__setitem__` raises through, a `StopIteration` included, which it took for the end of the keys and swallowed. Here, on an older base, without master's handling of a `frozendict` result |
+| `native-iterator-loop` | a loop over a dict, a set, a view or another builtin iterator walks its `tp_iternext` itself and ends where it ends, with no `StopIteration` raised and caught at the end of each loop; a subclass with its own `__next__` still goes through it |
 | (on this base) | a method a class derived in Python has in common with its Javascript base is the redefinition for Javascript too, a method of the base calling `this.set()` included; `super()` reaches the base's on its prototype, and `Cls.new()` makes the derived instance, where it made the base's |
 | (on this base) | `del` of a name a namespace no longer holds raises `NameError` in a namespace without prototype too, as an embedder's is, where it raised `TypeError: Cannot convert object to primitive value` |
 | (on this base) | a class derived in Python from a Javascript class takes that class from the first base that has one, so a class of Python's may come before it, as a mixin does: `class Mixed(Mixin, window.Map)` raised |
