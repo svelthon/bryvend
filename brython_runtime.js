@@ -951,6 +951,8 @@ ft_buffer[ft_buffer.length-1]=='\\'){
 ft_buffer+='\\'}
 if(ft_escape){if(char=='\n'){
 line_num++
+line_start=pos+1
+line=get_line_at(pos)
 ft_escape=false
 continue}
 if(char=='N' && src.charAt(pos)=='{'){
@@ -992,7 +994,9 @@ ft_buffer+='\\'}
 ft_buffer+='\\'}
 ft_buffer+=char
 ft_escape=false
-if(char=='\n'){line_num++}
+if(char=='\n'){line_num++
+line_start=pos+1
+line=get_line_at(pos)}
 continue}}else if(token_mode=='format_specifier'){if(char==quote){if(format_specifier.length > 0){
 t.push(Token(FT_MIDDLE[ft_type],format_specifier,line_num,ft_chunk_start,line_num,pos-line_start-char.length+1,line))
 token_modes.pop()
@@ -1222,7 +1226,8 @@ if(prefix.toLowerCase().includes('f')){is_ft=true
 ft_type='f'}else if(prefix.toLowerCase().includes('t')){is_ft=true
 ft_type='t'}
 if(is_ft){token_mode=new String('ft')
-ft_start=pos-line_start-name.length
+ft_start=pos-line_start-name.length-
+(triple_quote ? 2 :0)
 token_mode.nesting=braces.length
 token_mode.quote=quote
 token_mode.triple_quote=triple_quote
