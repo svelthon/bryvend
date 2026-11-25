@@ -1,7 +1,7 @@
 # Patches applied to the vendored Brython
 
 `brython_runtime.js` and `brython_compiler.js` are cut from one bundle, built
-from Brython's master of 11 September 2026 plus three hundred proposed commits
+from Brython's master of 11 September 2026 plus three hundred and five proposed commits
 (`metaclass-getattribute-args`, `iterator-setstate` and `getitem-binding` in two, as amended for their PRs), nine merged
 upstream since (#3022, #2996, #2989, #2982, #3125, #3047, #3119, #3072, and master's `3afab4451`), and a hundred and
 four of mine merged upstream between 12 September and 14 October that the bundle had missed, carried as master holds
@@ -271,6 +271,11 @@ written against:
 | `coroutine-await` | a coroutine has its `__await__`, a `coroutine_wrapper` that yields the coroutine once and returns the result it is sent back, so that an `__await__` returning `coro.__await__()` is awaited as the coroutine |
 | `fstring-triple-quote-start` | an f-string or a t-string between triple quotes starts at its prefix, `f"""{x}"""` at column 0, where it was placed two columns further, inside its own quotes |
 | `fstring-next-line-column` | on a line of an f-string or a t-string after its first, after a line break or a backslash at the end of a line, a field and the names in it have the columns of that line, where they were counted from the start of the first |
+| `float-format-precision-alone` | a float with a precision and no type is written as `g` would write it, but with a digit past the point in fixed notation and in scientific notation from an exponent of the precision minus one: `format(1e16, ".3")` is `1e+16`, where it was `1.e+16e+04`, and `format(1.0, ".3")` is `1.0` |
+| `float-format-special-values` | an infinity or a NaN takes `%` after it for `%`, `format(float("inf"), "%")` is `inf%`. Here, on an older base, with the capitals for `E`, `F` and `G` alone that this base had already |
+| `complex-format` | a complex number is formatted part by part as floats, the width applied to the whole, the imaginary part's sign always shown, in parentheses with no type alone: `format(1 + 2j, ".2f")` is `1.00+2.00j`, where it was `(1.00+2.00j)`, and `format(1 + 2j, ">8")` is `  (1+2j)`, where it was `(1.e+00e+04+   2e+00j)`. Here, on an older base, with the grouping this base names `comma` |
+| `str-format-zero-fill` | a 0 before the width of a string fills with zeros on the right of it, the string aligned to the left as with no 0: `format("abc", "08")` is `abc00000`, where it was `00000abc` |
+| `fstring-specifier-field` | an f-string whose format specifier holds a field, in a field of another f-string, compiles: `f'{f"{x:{spec}}"}'` raised `SyntaxError` |
 | (on this base) | a method a class derived in Python has in common with its Javascript base is the redefinition for Javascript too, a method of the base calling `this.set()` included; `super()` reaches the base's on its prototype, and `Cls.new()` makes the derived instance, where it made the base's |
 | (on this base) | `del` of a name a namespace no longer holds raises `NameError` in a namespace without prototype too, as an embedder's is, where it raised `TypeError: Cannot convert object to primitive value` |
 | (on this base) | a class derived in Python from a Javascript class takes that class from the first base that has one, so a class of Python's may come before it, as a mixin does: `class Mixed(Mixin, window.Map)` raised |

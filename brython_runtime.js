@@ -896,7 +896,9 @@ if(token_mode !=save_mode){if(token_mode=='ft'){ft_buffer=''
 ft_chunk_start=pos-line_start-char.length+1
 ft_chunk_index=pos-char.length
 ft_escape=false}else if(token_mode=='format_specifier'){format_specifier=''
-ft_chunk_start=pos-line_start-char.length+1}}
+ft_chunk_start=pos-line_start-char.length+1
+if($B.last(fstring_stack)?.inside_format_specifier){
+fstring_stack.pop()}}}
 save_mode=token_mode
 if(token_mode=='ft'){
 if(char==token_mode.quote){if(ft_escape){ft_buffer+='\\'+char
@@ -9973,6 +9975,7 @@ str_funcs.__format__=function(self,format_spec){[self,format_spec]=to_string(sel
 var fmt=new $B.parse_format_spec(format_spec,self)
 if(fmt.sign !==undefined){$B.RAISE(_b_.ValueError,"Sign not allowed in string format specifier")}
 if(fmt.precision){self=to_chars(self).slice(0,fmt.precision).join('')}
+if(fmt.fill=='0' && fmt.align=='=' && ! /^.?[<>=^]/.test(format_spec)){fmt.align="<"}
 fmt.align=fmt.align ||"<"
 return $B.String($B.format_width(preformat(self,fmt),fmt))}
 str_funcs.__getnewargs__=function(self){return str.$getnewargs(self)}
@@ -11103,7 +11106,8 @@ var special
 if(isNaN(value)){special="nan"}else if(value==Number.POSITIVE_INFINITY){special="inf"}else if(value==Number.NEGATIVE_INFINITY){special="-inf"}
 if(special){
 return format_sign(value,fmt)+
-("EFG".includes(fmt.type ?? "-")? special.toUpperCase():special)}
+("EFG".includes(fmt.type ?? "-")? special.toUpperCase():special)+
+(fmt.type=="%" ? "%" :"")}
 if(fmt.type=="n"){
 fmt.type="g"}
 if(fmt.sign=="+" ||fmt.sign==" "){
@@ -11142,20 +11146,18 @@ parts[0]=signif}
 res=parts.join("e")
 if(fmt.type=="G"){res=res.toUpperCase()}
 return res}else if(fmt.type===undefined){
-fmt.type="g"
-res=preformat(self,fmt)
-if(res.indexOf('.')==-1){let exp=res.length-1
-exp=exp < 10 ? '0'+exp :exp
-let is_neg=res.startsWith('-'),point_pos=is_neg ? 2 :1,mant=res.substr(0,point_pos)+'.'+
-res.substr(point_pos)
-return `${mant}e+${exp}`}
-fmt.type=undefined}else{
+let precision=Math.max(prec,1),exp=parseInt(value.toExponential(precision-1).split('e')[1])
+if(exp <-4 ||exp >=precision-1){let[mantissa,exponent]=preformat(self,{type:'e',precision:precision-1}).split('e')
+if(! fmt.alternate && mantissa.includes('.')){mantissa=mantissa.replace(/\.?0+$/,'')}
+res=mantissa+'e'+exponent}else{
+res=preformat(self,{type:'f',precision:precision-1-exp})}}else{
 let res1=exponential(value,fmt.precision-1),exp=parseInt(res1.substr(res1.search("e")+1))
 if(exp <-4 ||exp >=fmt.precision-1){var elts=res1.split("e")
 while(elts[0].endsWith("0")){elts[0]=elts[0].substr(0,elts[0].length-1)}
 res=elts.join("e")}}}else{
 res=_b_.str.$factory(self)}
-if(fmt.type===undefined ||"gGn".indexOf(fmt.type)!=-1){
+if((fmt.type===undefined && ! fmt.alternate)||
+"gGn".indexOf(fmt.type)!=-1){
 if(res.search("e")==-1){while(res.charAt(res.length-1)=="0"){res=res.substr(0,res.length-1)}}
 if(res.charAt(res.length-1)=="."){if(fmt.type===undefined){res+="0"}else{
 res=res.substr(0,res.length-1)}}}
@@ -11864,33 +11866,22 @@ complex_funcs.__complex__=function(self){
 if($B.exact_type(self,complex)){return self}
 return $B.make_complex(self.real,self.imag)}
 complex_funcs.__format__=function(self,format_spec){if(format_spec.length==0){return _b_.str.$factory(self)}
-var fmt=new $B.parse_format_spec(format_spec,self),type=fmt.conversion_type
-var skip_re,add_parens
-if(type===undefined ||'eEfFgGn'.indexOf(type)>-1){if(fmt.precision > max_precision){$B.RAISE(_b_.ValueError,'precision too big')}
-if(fmt.fill_char=='0'){$B.RAISE(_b_.ValueError,"Zero padding is not allowed in complex format specifier")}
-if(fmt.align=='='){$B.RAISE(_b_.ValueError,"'=' alignment flag is not allowed in complex format "+
-"specifier")}
-var re=self.real.value,precision=parseInt(fmt.precision,10)
-if(type===undefined){type='r'
-if(re==0 && Object.is(re,0)){skip_re=1}else{
-add_parens=1}}else if(type=='n'){type='g'}
-if(precision < 0){precision=6}else if(type=='r'){type='g'}
-var format=$B.clone(fmt)
-format.conversion_type=type
-format.precision=precision
-var res=''
-if(! skip_re){res+=_b_.float.$format(self.real,format)
-if(self.imag.value >=0){res+='+'}}
-var formatted_im=_b_.float.$format(self.imag,format)
-var pos=-1,last_num
-for(var char of formatted_im){pos++
-if(char.match(/\d/)){last_num=pos}}
-formatted_im=formatted_im.substr(0,last_num+1)+'j'+
-formatted_im.substr(last_num+1)
-res+=formatted_im
+var fmt=new $B.parse_format_spec(format_spec,self),type=fmt.type
+if(type !==undefined && ! 'eEfFgGn'.includes(type)){$B.RAISE(_b_.ValueError,`Unknown format code '${type}' for object of type 'complex'`)}
+if(fmt.precision > max_precision){$B.RAISE(_b_.ValueError,'precision too big')}
+if(fmt.fill=='0'){$B.RAISE(_b_.ValueError,"Zero padding is not allowed in complex format specifier")}
+if(fmt.align=='='){$B.RAISE(_b_.ValueError,"'=' alignment flag is not allowed in complex format specifier")}
+var re=self.real.value,skip_re=type===undefined && re==0 && Object.is(re,0),add_parens=type===undefined && ! skip_re
+function part(value,sign){var res=_b_.float.$format(value,{type:type=='n' ||(type===undefined &&
+fmt.precision !==undefined)? 'g' :type,precision:fmt.precision,alternate:fmt.alternate,grouping:fmt.grouping,comma:fmt.comma,grouping_option:fmt.grouping_option,decimal_grouping:fmt.decimal_grouping,z:fmt.z})
+if(type===undefined && fmt.precision===undefined &&
+res.endsWith('.0')){res=res.substr(0,res.length-2)}
+return(sign=='+' ||sign==' ')&& ! res.startsWith('-')? sign+res :res}
+var res=(skip_re ? '' :part(self.real,fmt.sign))+
+part(self.imag,skip_re ? fmt.sign :'+')+'j'
 if(add_parens){res='('+res+')'}
-return res}
-$B.RAISE(_b_.ValueError,`invalid type for complex: ${type}`)}
+fmt.align=fmt.align ||'>'
+return $B.format_width(res,fmt)}
 complex_funcs.__getnewargs__=function(self){return complex.$getnewargs(self)}
 complex_funcs.conjugate=function(self){return make_complex(self.real.value,-self.imag.value)}
 complex_funcs.from_number=function(cls,obj){var complex_func=$B.$getattr(obj,'__complex__',$B.NULL)
