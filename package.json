@@ -1,6 +1,6 @@
 {
   "name": "bryvend",
-  "version": "3.14.31",
+  "version": "3.14.32",
   "description": "The Brython that Bryntime and Brycomp run on, with its fixes, until upstream Brython carries them",
   "author": "Florent Gallaire <fgallaire@gmail.com>",
   "license": "BSD-3-Clause",
